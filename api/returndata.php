@@ -6,6 +6,7 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
 }
 
 $payload = request_payload();
+app_request_log('result.request_received', ['payload_keys' => array_keys($payload)]);
 
 function normalize_result_field($value): string
 {
@@ -32,9 +33,11 @@ $discountRaw = $payload['discount'] ?? null;
 $discount = ($discountRaw === null || $discountRaw === '') ? null : normalize_result_field($discountRaw);
 
 if ($taskNo === '') {
+    app_request_log('result.validation_failed', ['reason' => 'missing_task_no']);
     json_response(['success' => false, 'code' => 'missing_task_no', 'message' => '缺少 task_no。'], 422);
 }
 if ($discount !== null && !is_numeric($discount)) {
+    app_request_log('result.validation_failed', ['task_no' => $taskNo, 'reason' => 'invalid_discount']);
     json_response(['success' => false, 'code' => 'invalid_discount', 'message' => 'discount 必须是数字，也可以是负数。'], 422);
 }
 
@@ -57,16 +60,19 @@ if ($nonZeroCounts && count(array_unique($nonZeroCounts)) > 1) {
 
 $pdo = db();
 try {
+    app_request_log('result.transaction_started', ['task_no' => $taskNo]);
     $pdo->beginTransaction();
     $taskStmt = $pdo->prepare('SELECT id, task_no, status FROM contract_tasks WHERE task_no = :task_no LIMIT 1 FOR UPDATE');
     $taskStmt->execute([':task_no' => $taskNo]);
     $task = $taskStmt->fetch();
     if (!$task) {
         $pdo->rollBack();
+        app_request_log('result.task_not_found', ['task_no' => $taskNo]);
         json_response(['success' => false, 'code' => 'task_not_found', 'message' => '找不到对应任务号。'], 404);
     }
     if (!in_array($task['status'], ['recognizing', 'completed'], true)) {
         $pdo->rollBack();
+        app_request_log('result.invalid_status', ['task_no' => $taskNo, 'status' => $task['status']]);
         json_response([
             'success' => false,
             'code' => 'invalid_task_status',
@@ -95,6 +101,7 @@ try {
         ':unit_cost' => $unitCost,
         ':discount' => $discount,
     ]);
+    app_request_log('result.data_saved', ['task_no' => $taskNo, 'line_counts' => $counts]);
 
     $rawResult = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     $updateStmt = $pdo->prepare(
@@ -104,6 +111,7 @@ try {
     );
     $updateStmt->execute([':raw_result' => $rawResult, ':id' => $task['id']]);
     $pdo->commit();
+    app_request_log('result.completed', ['task_no' => $taskNo, 'warnings' => $warnings]);
 
     json_response([
         'success' => true,
@@ -120,6 +128,7 @@ try {
         $pdo->rollBack();
     }
     write_app_log('api_returndata', '识别结果保存异常', ['task_no' => $taskNo, 'message' => $e->getMessage()]);
+    app_request_log('result.failed', ['task_no' => $taskNo, 'error' => $e->getMessage()]);
     json_response([
         'success' => false,
         'code' => 'save_error',

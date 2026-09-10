@@ -25,6 +25,8 @@ function normalize_uploads(array $files): array
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $uploadNames = $_FILES['documents']['name'] ?? [];
+    app_request_log('task.validation_started', ['upload_count' => is_array($uploadNames) ? count($uploadNames) : 0]);
     verify_csrf();
     $uploadedFiles = normalize_uploads($_FILES['documents'] ?? []);
     $maxFiles = (int)config_value('upload.max_files', 10);
@@ -40,11 +42,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $converter = new TaskFileConverter((array)config_value('upload', []));
         $taskDir = '';
         try {
+            app_request_log('task.transaction_started');
             $pdo->beginTransaction();
             $insertTask = $pdo->prepare("INSERT INTO contract_tasks (task_no, sales_person, status, created_by, created_at, updated_at) VALUES (NULL, :sales_person, 'pending', :created_by, NOW(), NOW())");
             $insertTask->execute([':sales_person' => $salesPerson, ':created_by' => (int)$_SESSION['user_id']]);
             $taskId = (int)$pdo->lastInsertId();
-            $taskNo = 'MO' . date('Ymd') . str_pad((string)$taskId, 6, '0', STR_PAD_LEFT);
+            $taskNo = format_task_no($taskId);
             $updateTask = $pdo->prepare('UPDATE contract_tasks SET task_no = :task_no WHERE id = :id');
             $updateTask->execute([':task_no' => $taskNo, ':id' => $taskId]);
 
@@ -57,6 +60,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             );
 
             foreach ($uploadedFiles as $index => $file) {
+                app_request_log('task.file_conversion_started', ['task_no' => $taskNo, 'file_index' => $index + 1, 'original_name' => basename((string)$file['name'])]);
                 $saved = $converter->saveAndConvert($file, $taskDir, $index + 1);
                 $saved['task_id'] = $taskId;
                 $insertFile->execute([
@@ -70,8 +74,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ':sha256' => $saved['sha256'],
                     ':conversion_method' => $saved['conversion_method'],
                 ]);
+                app_request_log('task.file_saved', ['task_no' => $taskNo, 'file_index' => $index + 1, 'conversion_method' => $saved['conversion_method']]);
             }
             $pdo->commit();
+            app_request_log('task.created', ['task_no' => $taskNo, 'task_id' => $taskId, 'file_count' => count($uploadedFiles)]);
             flash('success', '合同任务 ' . $taskNo . ' 已创建，当前状态为“待识别”。');
             redirect('contract_form_detail.php?task_no=' . rawurlencode($taskNo));
         } catch (Throwable $e) {
@@ -82,8 +88,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $converter->removeDirectory($taskDir);
             }
             write_app_log('upload', '创建任务失败', ['message' => $e->getMessage()]);
+            app_request_log('task.failed', ['task_no' => $taskNo ?? null, 'error' => $e->getMessage()]);
             $error = $e->getMessage();
         }
+    }
+    if ($error !== '') {
+        app_request_log('task.validation_failed', ['error' => $error]);
     }
 }
 

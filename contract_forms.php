@@ -87,7 +87,7 @@ require __DIR__ . '/includes/layout_top.php';
 
 <div class="card" style="margin-bottom:18px">
     <form class="filter-bar" method="get">
-        <div class="filter-item"><label for="task_no">任务号</label><input class="form-control" id="task_no" name="task_no" value="<?= h($taskNo) ?>" placeholder="例如 MO202609..."></div>
+        <div class="filter-item"><label for="task_no">任务号</label><input class="form-control" id="task_no" name="task_no" value="<?= h($taskNo) ?>" placeholder="例如 T000001"></div>
         <div class="filter-item"><label for="sales_person">Sales Person</label><input class="form-control" id="sales_person" name="sales_person" value="<?= h($salesPerson) ?>" placeholder="输入销售人员"></div>
         <div class="filter-item"><label for="status">任务状态</label><select class="form-control" id="status" name="status"><option value="">全部状态</option><?php foreach ($allowedStatuses as $option): ?><option value="<?= h($option) ?>" <?= $status === $option ? 'selected' : '' ?>><?= h(status_label($option)) ?></option><?php endforeach; ?></select></div>
         <button class="btn btn-primary" type="submit">查询</button>

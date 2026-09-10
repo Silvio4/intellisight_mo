@@ -17,6 +17,7 @@ API_INTEGRATION_GUIDE.md
 - 新建表单可填写 Sales Person，并上传 1–10 份文件。
 - 支持 PDF、常见图片、Word、Excel、PowerPoint、RTF、TXT、CSV。
 - 上传文件保存在 `files/任务号/`；原文件以 `source_` 开头，识别用 PDF 以 `document_` 开头。
+- 任务号直接使用数据库自增序号，并统一格式化为 `T` 加至少 6 位数字，例如 `T000001`、`T000002`。
 - 提交成功后生成“待识别”任务。
 - `api/get_task.php`：派发任务，并保证全系统同时最多只有一条“识别中”任务。
 - `api/download_file.php`：供识别端下载派发任务下的 PDF。
@@ -122,7 +123,7 @@ http://服务器地址/intellisight_mo/api/get_task.php
   "message": "已派发一条待识别任务，并更新为识别中。",
   "dispatched": true,
   "task": {
-    "task_no": "MO20260910000001",
+    "task_no": "T000001",
     "status": "recognizing",
     "sales_person": "Silvio",
     "pdf_count": 2,
@@ -153,7 +154,7 @@ Content-Type: application/json
 
 ```json
 {
-  "task_no": "MO20260910000001",
+  "task_no": "T000001",
   "po_no": "PO-2026-001",
   "delivery_address": "Macau ...",
   "no": "1;2",
@@ -188,6 +189,10 @@ intellisight_mo/
 ├─ contract_form_detail.php   任务详情
 └─ database.sql               数据库初始化脚本
 ```
+
+每次请求都会写入开始、数据库连接、业务阶段、响应及结束日志。API 请求统一写入
+`logs/api_YYYY-MM-DD.log`，并通过 `X-Request-ID` 响应头返回关联编号，便于串联同一次请求的各环节；
+其他页面请求写入 `logs/app_YYYY-MM-DD.log`。日志不会记录下载令牌、文件 Base64 或完整业务请求体。
 
 ## 7. 当前雏形的边界
 

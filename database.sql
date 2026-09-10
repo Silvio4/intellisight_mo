@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS `users` (
 
 CREATE TABLE IF NOT EXISTS `contract_tasks` (
   `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-  `task_no` VARCHAR(32) DEFAULT NULL COMMENT '任务号',
+  `task_no` VARCHAR(32) DEFAULT NULL COMMENT '任务号，格式为 T + 至少6位任务序号（如 T000001）',
   `sales_person` VARCHAR(120) NOT NULL COMMENT '销售人员',
   `status` ENUM('pending','recognizing','completed','failed') NOT NULL DEFAULT 'pending' COMMENT '任务状态',
   `created_by` INT UNSIGNED NOT NULL COMMENT '创建用户ID',

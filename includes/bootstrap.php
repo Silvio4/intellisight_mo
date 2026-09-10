@@ -17,6 +17,7 @@ if (session_status() !== PHP_SESSION_ACTIVE && PHP_SAPI !== 'cli') {
 }
 
 require_once __DIR__ . '/functions.php';
+initialize_request_logging();
 
 function db(): PDO
 {
@@ -35,11 +36,13 @@ function db(): PDO
         $db['database'],
         $db['charset'] ?? 'utf8mb4'
     );
+    app_request_log('database.connecting', ['host' => $db['host'], 'database' => $db['database']]);
     $pdo = new PDO($dsn, $db['username'], $db['password'], [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
         PDO::ATTR_EMULATE_PREPARES => false,
     ]);
     $pdo->exec("SET time_zone = '+08:00'");
+    app_request_log('database.connected');
     return $pdo;
 }

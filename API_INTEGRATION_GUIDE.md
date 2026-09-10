@@ -157,7 +157,7 @@ var_dump($httpCode, $result);
 
 | 字段 | 类型 | 说明 |
 | --- | --- | --- |
-| `task_no` | string | 智眸任务号，返回识别结果时必须原样带回 |
+| `task_no` | string | `T` 加至少 6 位任务序号（如 `T000001`），返回识别结果时必须原样带回 |
 | `status` | string | 当前状态，正常为 `recognizing` |
 | `status_text` | string | 中文状态名称 |
 | `sales_person` | string | 创建表单时填写的 Sales Person |
@@ -193,7 +193,7 @@ var_dump($httpCode, $result);
   "message": "已派发一条待识别任务，并更新为识别中。",
   "dispatched": true,
   "task": {
-    "task_no": "MO20260910000001",
+    "task_no": "T000001",
     "status": "recognizing",
     "status_text": "识别中",
     "sales_person": "Silvio",
@@ -234,7 +234,7 @@ var_dump($httpCode, $result);
   "message": "当前已有识别中的任务，本次不派发新任务。",
   "dispatched": false,
   "task": {
-    "task_no": "MO20260910000001",
+    "task_no": "T000001",
     "status": "recognizing",
     "status_text": "识别中",
     "sales_person": "Silvio",
@@ -447,7 +447,7 @@ unit_cost
 
 ```json
 {
-  "task_no": "MO20260910000001",
+  "task_no": "T000001",
   "po_no": "PO-2026-001",
   "delivery_address": "Avenida de Almeida Ribeiro, Macau",
   "no": "1;2",
@@ -465,7 +465,7 @@ unit_cost
 curl -X POST "https://example.com/intellisight_mo/api/returndata.php" \
   -H "Content-Type: application/json" \
   -d '{
-    "task_no": "MO20260910000001",
+    "task_no": "T000001",
     "po_no": "PO-2026-001",
     "delivery_address": "Avenida de Almeida Ribeiro, Macau",
     "no": "1;2",
@@ -484,7 +484,7 @@ import requests
 
 url = "https://example.com/intellisight_mo/api/returndata.php"
 payload = {
-    "task_no": "MO20260910000001",
+    "task_no": "T000001",
     "po_no": "PO-2026-001",
     "delivery_address": "Avenida de Almeida Ribeiro, Macau",
     "no": "1;2",
@@ -508,7 +508,7 @@ response.raise_for_status()
 $url = 'https://example.com/intellisight_mo/api/returndata.php';
 
 $payload = [
-    'task_no' => 'MO20260910000001',
+    'task_no' => 'T000001',
     'po_no' => 'PO-2026-001',
     'delivery_address' => 'Avenida de Almeida Ribeiro, Macau',
     'no' => '1;2',
@@ -550,7 +550,7 @@ var_dump($httpCode, $result);
 ```json
 {
   "data": {
-    "task_no": "MO20260910000001",
+    "task_no": "T000001",
     "po_no": "PO-2026-001",
     "delivery_address": "Macau",
     "no": "1;2",
@@ -574,7 +574,7 @@ var_dump($httpCode, $result);
   "success": true,
   "code": "result_saved",
   "message": "识别结果已保存，任务状态已更新为已完成。",
-  "task_no": "MO20260910000001",
+  "task_no": "T000001",
   "status": "completed",
   "status_text": "已完成",
   "line_counts": {
@@ -595,7 +595,7 @@ var_dump($httpCode, $result);
   "success": true,
   "code": "result_saved",
   "message": "识别结果已保存，任务状态已更新为已完成。",
-  "task_no": "MO20260910000001",
+  "task_no": "T000001",
   "status": "completed",
   "status_text": "已完成",
   "line_counts": {

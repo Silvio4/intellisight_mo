@@ -91,13 +91,77 @@ function status_class(string $status): string
     return $map[$status] ?? 'pending';
 }
 
+function format_task_no(int $sequence): string
+{
+    if ($sequence < 1) {
+        throw new InvalidArgumentException('任务序号必须大于 0。');
+    }
+    return 'T' . str_pad((string)$sequence, 6, '0', STR_PAD_LEFT);
+}
+
 function json_response(array $data, int $status = 200): void
 {
+    app_request_log('response', [
+        'http_status' => $status,
+        'success' => $data['success'] ?? null,
+        'code' => $data['code'] ?? null,
+        'task_no' => $data['task_no'] ?? ($data['task']['task_no'] ?? null),
+    ]);
     http_response_code($status);
     header('Content-Type: application/json; charset=utf-8');
     header('Cache-Control: no-store, no-cache, must-revalidate');
+    header('X-Request-ID: ' . (string)($GLOBALS['app_request_id'] ?? ''));
     echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     exit;
+}
+
+/**
+ * Write a lifecycle event for the current request. Potentially sensitive or very
+ * large request values are deliberately not recorded; detailed business stages
+ * should add their own small, diagnostic context.
+ */
+function app_request_log(string $stage, array $context = []): void
+{
+    $isApi = strpos(str_replace('\\', '/', (string)($_SERVER['SCRIPT_NAME'] ?? '')), '/api/') !== false;
+    $base = [
+        'request_id' => $GLOBALS['app_request_id'] ?? null,
+        'stage' => $stage,
+        'method' => $_SERVER['REQUEST_METHOD'] ?? PHP_SAPI,
+        'path' => parse_url((string)($_SERVER['REQUEST_URI'] ?? ($_SERVER['SCRIPT_NAME'] ?? 'cli')), PHP_URL_PATH),
+        'remote_addr' => $_SERVER['REMOTE_ADDR'] ?? null,
+    ];
+    write_app_log($isApi ? 'api' : 'app', 'request.' . $stage, array_merge($base, $context));
+}
+
+function initialize_request_logging(): void
+{
+    if (isset($GLOBALS['app_request_id'])) {
+        return;
+    }
+    try {
+        $GLOBALS['app_request_id'] = bin2hex(random_bytes(8));
+    } catch (Throwable $e) {
+        $GLOBALS['app_request_id'] = uniqid('', true);
+    }
+    $GLOBALS['app_request_started_at'] = microtime(true);
+    app_request_log('started', ['query_keys' => array_keys($_GET ?? [])]);
+
+    register_shutdown_function(static function (): void {
+        $error = error_get_last();
+        $fatalTypes = [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR];
+        if ($error && in_array($error['type'], $fatalTypes, true)) {
+            app_request_log('fatal', [
+                'error' => $error['message'],
+                'file' => $error['file'],
+                'line' => $error['line'],
+            ]);
+        }
+        app_request_log('finished', [
+            'http_status' => http_response_code(),
+            'duration_ms' => (int)round((microtime(true) - ($GLOBALS['app_request_started_at'] ?? microtime(true))) * 1000),
+            'peak_memory_bytes' => memory_get_peak_usage(true),
+        ]);
+    });
 }
 
 function request_payload(): array

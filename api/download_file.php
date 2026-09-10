@@ -3,6 +3,7 @@ require __DIR__ . '/../includes/bootstrap.php';
 
 $fileId = (int)($_GET['file_id'] ?? 0);
 $token = trim((string)($_GET['token'] ?? ''));
+app_request_log('download.request_received', ['file_id' => $fileId, 'token_present' => $token !== '']);
 
 $stmt = db()->prepare(
     'SELECT f.id, f.pdf_name, f.original_name, t.task_no, t.claim_token, t.status
@@ -15,6 +16,7 @@ $file = $stmt->fetch();
 
 $validToken = $file && $token !== '' && !empty($file['claim_token']) && hash_equals((string)$file['claim_token'], $token);
 if (!$file || !$validToken) {
+    app_request_log('download.denied', ['file_id' => $fileId, 'reason' => $file ? 'invalid_token' : 'not_found']);
     http_response_code($file ? 401 : 404);
     header('Content-Type: application/json; charset=utf-8');
     echo json_encode(['success' => false, 'message' => $file ? 'PDF 下载令牌无效。' : 'PDF 文件不存在。'], JSON_UNESCAPED_UNICODE);
@@ -23,15 +25,19 @@ if (!$file || !$validToken) {
 
 $path = dirname(__DIR__) . '/files/' . $file['task_no'] . '/' . basename($file['pdf_name']);
 if (!is_file($path)) {
+    app_request_log('download.file_missing', ['file_id' => $fileId, 'task_no' => $file['task_no']]);
     http_response_code(404);
     exit('PDF 文件不存在');
 }
 
 $downloadName = pathinfo($file['original_name'], PATHINFO_FILENAME) . '.pdf';
+$fileSize = filesize($path);
+app_request_log('download.streaming', ['file_id' => $fileId, 'task_no' => $file['task_no'], 'bytes' => $fileSize]);
 header('Content-Type: application/pdf');
-header('Content-Length: ' . filesize($path));
+header('Content-Length: ' . $fileSize);
 header("Content-Disposition: attachment; filename*=UTF-8''" . rawurlencode($downloadName));
 header('Cache-Control: private, no-store');
 header('X-Content-Type-Options: nosniff');
+header('X-Request-ID: ' . (string)($GLOBALS['app_request_id'] ?? ''));
 readfile($path);
 exit;

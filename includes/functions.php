@@ -69,34 +69,20 @@ function take_flash(): ?array
     return is_array($value) ? $value : null;
 }
 
-function status_label(string $status): string
+function status_label($status): string
 {
     $map = [
-        'pending' => '待识别',
-        'recognizing' => '识别中',
-        'completed' => '已完成',
-        'failed' => '识别失败',
+        1 => '草稿中', 2 => '待识别', 3 => '识别中', 4 => '匹配中', 5 => '待传输', 6 => '已完成',
     ];
     return $map[$status] ?? $status;
 }
 
-function status_class(string $status): string
+function status_class($status): string
 {
     $map = [
-        'pending' => 'pending',
-        'recognizing' => 'recognizing',
-        'completed' => 'completed',
-        'failed' => 'failed',
+        1 => 'pending', 2 => 'pending', 3 => 'recognizing', 4 => 'recognizing', 5 => 'pending', 6 => 'completed',
     ];
     return $map[$status] ?? 'pending';
-}
-
-function format_task_no(int $sequence): string
-{
-    if ($sequence < 1) {
-        throw new InvalidArgumentException('任务序号必须大于 0。');
-    }
-    return 'T' . str_pad((string)$sequence, 6, '0', STR_PAD_LEFT);
 }
 
 function json_response(array $data, int $status = 200): void
@@ -105,7 +91,7 @@ function json_response(array $data, int $status = 200): void
         'http_status' => $status,
         'success' => $data['success'] ?? null,
         'code' => $data['code'] ?? null,
-        'task_no' => $data['task_no'] ?? ($data['task']['task_no'] ?? null),
+        'task_id' => $data['task_id'] ?? ($data['task']['id'] ?? null),
     ]);
     http_response_code($status);
     header('Content-Type: application/json; charset=utf-8');
@@ -183,11 +169,13 @@ function request_payload(): array
 
 function write_app_log(string $channel, string $message, array $context = []): void
 {
-    $dir = __DIR__ . '/../logs';
+    $isApi = strpos(str_replace('\\', '/', (string)($_SERVER['SCRIPT_NAME'] ?? '')), '/api/') !== false;
+    $dir = $isApi ? __DIR__ . '/../api/logs' : __DIR__ . '/../logs';
     if (!is_dir($dir)) {
         @mkdir($dir, 0775, true);
     }
-    $safeChannel = preg_replace('/[^a-z0-9_-]/i', '_', $channel);
+    $scriptChannel = pathinfo((string)($_SERVER['SCRIPT_FILENAME'] ?? ''), PATHINFO_FILENAME);
+    $safeChannel = preg_replace('/[^a-z0-9_-]/i', '_', $isApi && $scriptChannel !== '' ? $scriptChannel : $channel);
     $line = '[' . date('Y-m-d H:i:s') . '] ' . $message;
     if ($context) {
         $line .= ' ' . json_encode($context, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);

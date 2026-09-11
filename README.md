@@ -7,7 +7,7 @@ PHP + MySQL 5.7 合同识别系统，部署路径默认为 `/intellisight_mo`。
 `database.sql` 是破坏性全量重建脚本，仅保留三张表：
 
 - `users`：登录用户；
-- `contract_forms`：任务、Sales Person、附件、识别结果及所有流程时间。自增 `id` 直接作为任务号；
+- `contract_forms`：任务、Sales Person、附件、识别结果、UPC 匹配结果及所有流程时间。数据库使用自增 `id`，界面显示为 `T` + 6 位数字；
 - `logs`：任务操作记录，包含操作人、任务 ID、操作时间、操作内容和操作后状态。
 
 任务状态为：`1` 草稿中、`2` 待识别、`3` 识别中、`4` 匹配中、`5` 待传输、`6` 已完成。
@@ -32,7 +32,15 @@ PHP + MySQL 5.7 合同识别系统，部署路径默认为 `/intellisight_mo`。
 
 ### 回传识别结果
 
-`POST /api/returndata.php`，JSON 请求使用 `id`（兼容 `task_id` / `task_no`）标识任务，并可包含：`po_no`、`delivery_address`、`no`、`vendor_part_no`、`description`、`qty`、`unit_cost`、`discount`。明细字段使用英文分号分隔。保存后任务更新为状态 `6`。
+`POST /api/returndata.php`，JSON 请求使用 `id`（兼容 `task_id` / `task_no`）标识任务，并可包含：`po_no`、`delivery_address`、`no`、`vendor_part_no`、`description`、`qty`、`unit_cost`、`discount`。明细字段使用英文分号分隔。保存识别结果后会立即进入 P 系统流程，状态更新为 `4`（匹配中），响应会返回 `p_system_mock_url`。
+
+### P 系统（含当前模拟流程）
+
+- `POST /api/submit_p_sys.php`：按 `intellisight_id`（例如 `T000001`）读取识别结果并请求 P 系统；请求体和响应中的 `data` 都包含 `intellisight_id`。当前响应返回模拟页面 `mock_url`。
+- `/p_system_mock.php?id=1`：登录后打开模拟 P 系统，为每一行 Vendor Part No. / Description 输入 UPC Code 并提交。
+- `POST /api/p_sys_back.php`：接收 P 系统返回。请求格式为 `{"data":{"intellisight_id":"T000001","upc_code":["...","..."]}}`，保存至任务的 `upc_code` 字段，状态更新为 `5`（待传输）。
+
+已有数据库请先执行 `database_migration_p_system.sql`；全新安装直接使用 `database.sql`。
 
 每个接口独立写入 `api/logs/<接口名>_YYYY-MM-DD.log`；网页日志写入根目录 `logs/`。
 

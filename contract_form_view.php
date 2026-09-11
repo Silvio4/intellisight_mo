@@ -18,17 +18,17 @@ function split_result_value($value): array
 $lineItems = [];
 if ($result) {
     $columns = [];
-    foreach (['no','vendor_part_no','description','qty','unit_cost'] as $field) $columns[$field] = split_result_value($result[$field]);
+    foreach (['no','vendor_part_no','description','qty','unit_cost','upc_code'] as $field) $columns[$field] = split_result_value($result[$field]);
     $columnCounts = array_map('count', $columns);
     $rowCount = $columnCounts ? max($columnCounts) : 0;
-    for ($i=0;$i<$rowCount;$i++) $lineItems[]=['no'=>$columns['no'][$i]??'','vendor_part_no'=>$columns['vendor_part_no'][$i]??'','description'=>$columns['description'][$i]??'','qty'=>$columns['qty'][$i]??'','unit_cost'=>$columns['unit_cost'][$i]??''];
+    for ($i=0;$i<$rowCount;$i++) $lineItems[]=['no'=>$columns['no'][$i]??'','vendor_part_no'=>$columns['vendor_part_no'][$i]??'','description'=>$columns['description'][$i]??'','qty'=>$columns['qty'][$i]??'','unit_cost'=>$columns['unit_cost'][$i]??'','upc_code'=>$columns['upc_code'][$i]??''];
 }
 
 $pageTitle = '任务详情';
 require __DIR__ . '/includes/layout_top.php';
 ?>
 <div class="page-head">
-    <div><h2><?= h($task['id']) ?></h2><p>合同任务详情与识别结果</p></div>
+    <div><h2><?= h(format_task_no($task['id'])) ?></h2><p>合同任务详情与识别结果</p></div>
     <a class="btn btn-secondary" href="<?= h(app_url('contract_forms.php')) ?>">← 返回列表</a>
 </div>
 
@@ -37,7 +37,7 @@ require __DIR__ . '/includes/layout_top.php';
         <div class="card-head"><h3>任务信息</h3><span class="status-badge <?= h(status_class($task['status'])) ?>"><?= h(status_label($task['status'])) ?></span></div>
         <div class="card-body">
             <div class="info-grid">
-                <div class="info-item"><label>任务号</label><div><b><?= h($task['id']) ?></b></div></div>
+                <div class="info-item"><label>任务号</label><div><b><?= h(format_task_no($task['id'])) ?></b></div></div>
                 <div class="info-item"><label>Sales Person</label><div><?= h($task['sales_person'] ?: '—') ?></div></div>
                 <div class="info-item"><label>创建人</label><div><?= h($task['created_by_name']) ?></div></div>
                 <div class="info-item"><label>创建时间</label><div><?= h($task['created_at']) ?></div></div>
@@ -76,16 +76,18 @@ require __DIR__ . '/includes/layout_top.php';
             </div>
             <div class="table-wrap">
                 <table class="data-table result-table">
-                    <thead><tr><th>No.</th><th>Vendor Part No.</th><th>Description</th><th>Qty</th><th>Unit Cost</th></tr></thead>
+                    <thead><tr><th>No.</th><th>Vendor Part No.</th><th>Description</th><th>Qty</th><th>Unit Cost</th><th>UPC Code</th></tr></thead>
                     <tbody>
-                    <?php if (!$lineItems): ?><tr><td colspan="5" style="text-align:center;color:#929bab">接口未返回明细行</td></tr><?php endif; ?>
-                    <?php foreach ($lineItems as $item): ?><tr><td><?= h($item['no']) ?></td><td><?= h($item['vendor_part_no']) ?></td><td><?= h($item['description']) ?></td><td><?= h($item['qty']) ?></td><td><?= h($item['unit_cost']) ?></td></tr><?php endforeach; ?>
+                    <?php if (!$lineItems): ?><tr><td colspan="6" style="text-align:center;color:#929bab">接口未返回明细行</td></tr><?php endif; ?>
+                    <?php foreach ($lineItems as $item): ?><tr><td><?= h($item['no']) ?></td><td><?= h($item['vendor_part_no']) ?></td><td><?= h($item['description']) ?></td><td><?= h($item['qty']) ?></td><td><?= h($item['unit_cost']) ?></td><td><?= h($item['upc_code'] ?: '—') ?></td></tr><?php endforeach; ?>
                     </tbody>
                 </table>
             </div>
         <?php endif; ?>
     </div>
 </section>
+
+<?php if ((int)$task['status'] === 4): ?><div style="margin-top:16px;text-align:right"><a class="btn btn-primary" href="<?= h(app_url('p_system_mock.php?id=' . $taskId)) ?>">打开模拟 P 系统</a></div><?php endif; ?>
 
 <?php if ($result && !empty($task['raw_result'])): ?>
 <section class="card" style="margin-top:20px">

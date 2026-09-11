@@ -45,6 +45,7 @@ CREATE TABLE `contract_forms` (
   `qty` TEXT NULL COMMENT '数量，分号分隔',
   `unit_cost` TEXT NULL COMMENT '单位成本，分号分隔',
   `discount` DECIMAL(18,4) DEFAULT NULL COMMENT '折扣，可为负数',
+  `upc_code` TEXT NULL COMMENT 'P系统匹配UPC码，分号分隔',
   `raw_result` JSON NULL COMMENT '接口原始回传数据',
   `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `submitted_recognition_at` DATETIME DEFAULT NULL COMMENT '提交识别时间',

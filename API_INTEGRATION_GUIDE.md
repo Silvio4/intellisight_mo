@@ -55,7 +55,7 @@ Content-Type: application/json
 }
 ```
 
-- `id` 是 `contract_forms.id`，即获取任务响应中的任务号；接口也兼容旧调用方传 `task_id` 或 `task_no`。
+- `id` 是 `contract_forms.id`，即获取任务响应中的任务号；接口也兼容旧调用方传 `task_id`、`task_no` 或界面格式 `T000001`。
 - `no`、`vendor_part_no`、`description`、`qty`、`unit_cost` 可以传分号分隔字符串或数组。
 - `unit_price` 可作为 `unit_cost` 的兼容别名。
 - 成功保存后状态更新为 `6`（已完成），并记录识别、匹配和完成时间。

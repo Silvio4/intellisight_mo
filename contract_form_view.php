@@ -1,66 +1,33 @@
 <?php
 require __DIR__ . '/includes/auth.php';
 
-$taskNo = trim((string)($_GET['task_no'] ?? ''));
-if ($taskNo === '') {
-    redirect('contract_forms.php');
-}
-
-$stmt = db()->prepare(
-    'SELECT t.*, u.name AS creator_name, u.username AS creator_username
-       FROM contract_tasks t
-       LEFT JOIN users u ON u.id = t.created_by
-      WHERE t.task_no = :task_no LIMIT 1'
-);
-$stmt->execute([':task_no' => $taskNo]);
+$taskId = (int)($_GET['id'] ?? 0);
+if ($taskId < 1) { redirect('contract_forms.php'); }
+$stmt = db()->prepare('SELECT * FROM contract_forms WHERE id = :id LIMIT 1');
+$stmt->execute([':id' => $taskId]);
 $task = $stmt->fetch();
-if (!$task) {
-    http_response_code(404);
-    exit('任务不存在');
-}
-
-$fileStmt = db()->prepare('SELECT * FROM contract_task_files WHERE task_id = :task_id ORDER BY id ASC');
-$fileStmt->execute([':task_id' => $task['id']]);
-$files = $fileStmt->fetchAll();
-
-$resultStmt = db()->prepare('SELECT * FROM contract_form WHERE task_id = :task_id LIMIT 1');
-$resultStmt->execute([':task_id' => $task['id']]);
-$result = $resultStmt->fetch();
+if (!$task) { http_response_code(404); exit('任务不存在'); }
+$result = ($task['po_no'] !== '' || $task['recognition_finished_at'] !== null) ? $task : null;
+$files = $task['attachment_contract_quote_epo'] ? [$task] : [];
 
 function split_result_value($value): array
 {
-    if ($value === null || trim((string)$value) === '') {
-        return [];
-    }
+    if ($value === null || trim((string)$value) === '') return [];
     return array_map('trim', explode(';', (string)$value));
 }
-
 $lineItems = [];
 if ($result) {
-    $columns = [
-        'no' => split_result_value($result['no']),
-        'vendor_part_no' => split_result_value($result['vendor_part_no']),
-        'description' => split_result_value($result['description']),
-        'qty' => split_result_value($result['qty']),
-        'unit_cost' => split_result_value($result['unit_cost']),
-    ];
+    $columns = [];
+    foreach (['no','vendor_part_no','description','qty','unit_cost'] as $field) $columns[$field] = split_result_value($result[$field]);
     $rowCount = max(0, ...array_map('count', $columns));
-    for ($i = 0; $i < $rowCount; $i++) {
-        $lineItems[] = [
-            'no' => $columns['no'][$i] ?? '',
-            'vendor_part_no' => $columns['vendor_part_no'][$i] ?? '',
-            'description' => $columns['description'][$i] ?? '',
-            'qty' => $columns['qty'][$i] ?? '',
-            'unit_cost' => $columns['unit_cost'][$i] ?? '',
-        ];
-    }
+    for ($i=0;$i<$rowCount;$i++) $lineItems[]=['no'=>$columns['no'][$i]??'','vendor_part_no'=>$columns['vendor_part_no'][$i]??'','description'=>$columns['description'][$i]??'','qty'=>$columns['qty'][$i]??'','unit_cost'=>$columns['unit_cost'][$i]??''];
 }
 
 $pageTitle = '任务详情';
 require __DIR__ . '/includes/layout_top.php';
 ?>
 <div class="page-head">
-    <div><h2><?= h($task['task_no']) ?></h2><p>合同任务详情与识别结果</p></div>
+    <div><h2><?= h($task['id']) ?></h2><p>合同任务详情与识别结果</p></div>
     <a class="btn btn-secondary" href="<?= h(app_url('contract_forms.php')) ?>">← 返回列表</a>
 </div>
 
@@ -69,11 +36,11 @@ require __DIR__ . '/includes/layout_top.php';
         <div class="card-head"><h3>任务信息</h3><span class="status-badge <?= h(status_class($task['status'])) ?>"><?= h(status_label($task['status'])) ?></span></div>
         <div class="card-body">
             <div class="info-grid">
-                <div class="info-item"><label>任务号</label><div><b><?= h($task['task_no']) ?></b></div></div>
-                <div class="info-item"><label>Sales Person</label><div><?= h($task['sales_person']) ?></div></div>
-                <div class="info-item"><label>创建人</label><div><?= h($task['creator_name'] ?: $task['creator_username']) ?></div></div>
+                <div class="info-item"><label>任务号</label><div><b><?= h($task['id']) ?></b></div></div>
+                <div class="info-item"><label>Sales Person</label><div><?= h($task['sales_person'] ?: '—') ?></div></div>
+                <div class="info-item"><label>创建人</label><div><?= h($task['created_by_name']) ?></div></div>
                 <div class="info-item"><label>创建时间</label><div><?= h($task['created_at']) ?></div></div>
-                <div class="info-item"><label>开始识别时间</label><div><?= h($task['claimed_at'] ?: '—') ?></div></div>
+                <div class="info-item"><label>开始识别时间</label><div><?= h($task['recognition_started_at'] ?: '—') ?></div></div>
                 <div class="info-item"><label>完成时间</label><div><?= h($task['completed_at'] ?: '—') ?></div></div>
                 <?php if (!empty($task['error_message'])): ?><div class="info-item full"><label>错误信息</label><div style="color:#c43f50"><?= h($task['error_message']) ?></div></div><?php endif; ?>
             </div>
@@ -85,10 +52,10 @@ require __DIR__ . '/includes/layout_top.php';
         <div class="card-body">
             <?php foreach ($files as $file): ?>
                 <div class="file-download">
-                    <span class="file-type"><?= h(strtoupper(substr($file['extension'], 0, 4))) ?></span>
-                    <span class="file-meta"><b><?= h($file['original_name']) ?></b><small><?= number_format(((int)$file['file_size']) / 1024, 1) ?> KB · 已生成 PDF</small></span>
-                    <a class="btn btn-secondary btn-sm" href="<?= h(app_url('download.php?file_id=' . (int)$file['id'] . '&type=source')) ?>">原文件</a>
-                    <a class="btn btn-primary btn-sm" href="<?= h(app_url('download.php?file_id=' . (int)$file['id'] . '&type=pdf')) ?>">PDF</a>
+                    <span class="file-type"><?= h(strtoupper(substr($file['attachment_extension'], 0, 4))) ?></span>
+                    <span class="file-meta"><b><?= h($file['attachment_original_name']) ?></b><small><?= number_format(((int)$file['attachment_file_size']) / 1024, 1) ?> KB · 已生成 PDF</small></span>
+                    <a class="btn btn-secondary btn-sm" href="<?= h(app_url('download.php?id=' . (int)$file['id'] . '&type=source')) ?>">原文件</a>
+                    <a class="btn btn-primary btn-sm" href="<?= h(app_url('download.php?id=' . (int)$file['id'] . '&type=pdf')) ?>">PDF</a>
                 </div>
             <?php endforeach; ?>
         </div>
@@ -99,7 +66,7 @@ require __DIR__ . '/includes/layout_top.php';
     <div class="card-head"><h3>识别结果</h3><?php if (!$result): ?><span style="color:#929bab">等待接口回传</span><?php endif; ?></div>
     <div class="card-body">
         <?php if (!$result): ?>
-            <div class="empty-state" style="padding:35px 20px"><div class="empty-icon">◎</div><strong><?= $task['status'] === 'pending' ? '任务正在等待领取' : '暂未收到识别结果' ?></strong><p>识别系统调用接口并返回结果后，此处会自动展示。</p></div>
+            <div class="empty-state" style="padding:35px 20px"><div class="empty-icon">◎</div><strong><?= (int)$task['status'] === 2 ? '任务正在等待领取' : '暂未收到识别结果' ?></strong><p>识别系统调用接口并返回结果后，此处会自动展示。</p></div>
         <?php else: ?>
             <div class="info-grid" style="margin-bottom:20px">
                 <div class="info-item"><label>PO No.</label><div><?= h($result['po_no'] ?: '—') ?></div></div>

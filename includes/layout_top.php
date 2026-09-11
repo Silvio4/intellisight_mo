@@ -25,7 +25,7 @@ $flashMessage = take_flash();
             <span class="brand-copy"><b>智眸</b><small>INTELLISIGHT · MO</small></span>
         </a>
         <nav class="nav-menu">
-            <a class="nav-item <?= in_array($currentPage, ['contract_forms.php', 'contract_form_create.php', 'contract_form_detail.php'], true) ? 'active' : '' ?>" href="<?= h(app_url('contract_forms.php')) ?>">
+            <a class="nav-item <?= in_array($currentPage, ['contract_forms.php', 'contract_form_create.php', 'contract_form_view.php'], true) ? 'active' : '' ?>" href="<?= h(app_url('contract_forms.php')) ?>">
                 <span class="nav-icon">
                     <svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M15 3v5h5M9 12h7M9 16h7"/></svg>
                 </span>

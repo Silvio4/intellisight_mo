@@ -19,7 +19,8 @@ $lineItems = [];
 if ($result) {
     $columns = [];
     foreach (['no','vendor_part_no','description','qty','unit_cost'] as $field) $columns[$field] = split_result_value($result[$field]);
-    $rowCount = max(0, ...array_map('count', $columns));
+    $columnCounts = array_map('count', $columns);
+    $rowCount = $columnCounts ? max($columnCounts) : 0;
     for ($i=0;$i<$rowCount;$i++) $lineItems[]=['no'=>$columns['no'][$i]??'','vendor_part_no'=>$columns['vendor_part_no'][$i]??'','description'=>$columns['description'][$i]??'','qty'=>$columns['qty'][$i]??'','unit_cost'=>$columns['unit_cost'][$i]??''];
 }
 

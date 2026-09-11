@@ -93,4 +93,25 @@
             }
         });
     }
+
+    var columnFilters = document.querySelectorAll('.column-filter');
+    Array.prototype.forEach.call(columnFilters, function (filter) {
+        filter.addEventListener('toggle', function () {
+            if (!filter.open) return;
+            Array.prototype.forEach.call(columnFilters, function (other) {
+                if (other !== filter) other.open = false;
+            });
+            var control = filter.querySelector('.form-control');
+            if (control) window.setTimeout(function () { control.focus(); }, 0);
+        });
+    });
+    document.addEventListener('click', function (event) {
+        Array.prototype.forEach.call(columnFilters, function (filter) {
+            if (filter.open && !filter.contains(event.target)) filter.open = false;
+        });
+    });
+    document.addEventListener('keydown', function (event) {
+        if (event.key !== 'Escape') return;
+        Array.prototype.forEach.call(columnFilters, function (filter) { filter.open = false; });
+    });
 })();

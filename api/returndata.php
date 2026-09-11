@@ -2,6 +2,7 @@
 require __DIR__ . '/../includes/bootstrap.php';
 if(strtoupper($_SERVER['REQUEST_METHOD']??'')!=='POST')json_response(['success'=>false,'message'=>'仅支持 POST。'],405);
 $payload=request_payload();
+write_app_log('api', '【识别返回原始数据】：', ['data'=>$payload]);
 function normalize_result_field($value):string{if(is_array($value))$value=implode(';',array_map('strval',$value));return is_scalar($value)||$value===null?trim((string)$value):'';}
 $taskId=(int)($payload['id']??$payload['task_id']??$payload['task_no']??0);
 if($taskId<1)json_response(['success'=>false,'message'=>'缺少有效的任务 id。'],422);

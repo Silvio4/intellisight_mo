@@ -18,9 +18,9 @@ if ($status < 1 || $status > 6) $status = 0;
 
 $where = [];
 $params = [];
-if ($taskId !== '' && ctype_digit($taskId)) {
+if ($taskId !== '' && parse_task_id($taskId) > 0) {
     $where[] = 'id=:id';
-    $params[':id'] = (int)$taskId;
+    $params[':id'] = parse_task_id($taskId);
 }
 if ($creator !== '') {
     $where[] = 'created_by_name LIKE :creator';
@@ -88,7 +88,7 @@ require __DIR__ . '/includes/layout_top.php';
                                 <?php if ($creator !== ''): ?><input type="hidden" name="creator" value="<?= h($creator) ?>"><?php endif; ?>
                                 <?php if ($status): ?><input type="hidden" name="status" value="<?= $status ?>"><?php endif; ?>
                                 <label for="filter-id">任务号</label>
-                                <input class="form-control" id="filter-id" name="id" value="<?= h($taskId) ?>" inputmode="numeric" placeholder="例如 1">
+                                <input class="form-control" id="filter-id" name="id" value="<?= h($taskId) ?>" placeholder="例如 T000001">
                                 <div class="column-filter-actions"><a href="<?= h(filter_reset_url('id')) ?>">清除</a><button class="btn btn-primary btn-sm">确认</button></div>
                             </form>
                         </details>
@@ -125,7 +125,7 @@ require __DIR__ . '/includes/layout_top.php';
                     <th>完成时间</th><th>操作</th>
                 </tr></thead>
                 <tbody><?php foreach ($tasks as $task): ?><tr>
-                    <td><a class="task-link" href="<?= h(app_url('contract_form_view.php?id=' . (int)$task['id'])) ?>">#<?= (int)$task['id'] ?></a></td>
+                    <td><a class="task-link" href="<?= h(app_url('contract_form_view.php?id=' . (int)$task['id'])) ?>"><?= h(format_task_no($task['id'])) ?></a></td>
                     <td><?= h($task['sales_person'] ?: '—') ?></td><td><?= h($task['attachment_original_name'] ?: '—') ?></td><td><?= h($task['created_by_name']) ?></td><td><?= h($task['created_at']) ?></td>
                     <td><span class="status-badge <?= h(status_class($task['status'])) ?>"><?= h(status_label($task['status'])) ?></span></td>
                     <td><?= h($task['completed_at'] ?: '—') ?></td><td><a class="btn btn-secondary btn-sm" href="<?= h(app_url('contract_form_view.php?id=' . (int)$task['id'])) ?>">查看详情</a></td>

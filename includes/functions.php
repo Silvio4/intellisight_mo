@@ -85,6 +85,20 @@ function status_class($status): string
     return $map[$status] ?? 'pending';
 }
 
+function format_task_no($id): string
+{
+    return 'T' . str_pad((string)(int)$id, 6, '0', STR_PAD_LEFT);
+}
+
+function parse_task_id($value): int
+{
+    $value = strtoupper(trim((string)$value));
+    if (preg_match('/^T?(\d+)$/', $value, $matches)) {
+        return (int)$matches[1];
+    }
+    return 0;
+}
+
 function json_response(array $data, int $status = 200): void
 {
     app_request_log('response', [

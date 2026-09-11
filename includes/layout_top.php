@@ -19,10 +19,7 @@ $flashMessage = take_flash();
 <div class="app-shell">
     <aside class="sidebar" id="sidebar">
         <a class="brand" href="<?= h(app_url('contract_forms.php')) ?>">
-            <span class="brand-mark" aria-hidden="true">
-                <svg viewBox="0 0 44 44"><path d="M4 22C9 12 14 7 22 7s13 5 18 15c-5 10-10 15-18 15S9 32 4 22Z"/><circle cx="22" cy="22" r="7"/><circle cx="22" cy="22" r="2.5"/></svg>
-            </span>
-            <span class="brand-copy"><b>智眸</b><small>INTELLISIGHT · MO</small></span>
+            <img class="brand-logo" src="<?= h(app_url('assets/images/intellisight-ads-logo.png')) ?>" alt="ADS">
         </a>
         <nav class="nav-menu">
             <a class="nav-item <?= in_array($currentPage, ['contract_forms.php', 'contract_form_create.php', 'contract_form_view.php'], true) ? 'active' : '' ?>" href="<?= h(app_url('contract_forms.php')) ?>">

@@ -33,7 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $insertLog->execute([':operator' => $operator, ':task_id' => $taskId, ':content' => '保存表单', ':status' => 1]);
             $insertLog->execute([':operator' => $operator, ':task_id' => $taskId, ':content' => '提交识别', ':status' => 2]);
             $pdo->commit();
-            flash('success', '合同任务 #' . $taskId . ' 已创建，当前状态为“待识别”。');
+            flash('success', '合同任务 ' . format_task_no($taskId) . ' 已创建，当前状态为“待识别”。');
             redirect('contract_form_view.php?id=' . $taskId);
         } catch (Throwable $e) {
             if ($pdo->inTransaction()) $pdo->rollBack();
@@ -45,7 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 require __DIR__ . '/includes/layout_top.php';
 ?>
-<div class="page-head"><div><h2>新建合同表单</h2><p>上传合同资料，表单 ID 将直接作为任务号</p></div><a class="btn btn-secondary" href="<?= h(app_url('contract_forms.php')) ?>">← 返回列表</a></div>
+<div class="page-head"><div><h2>新建合同表单</h2><p>上传合同资料，系统将自动生成任务号</p></div><a class="btn btn-secondary" href="<?= h(app_url('contract_forms.php')) ?>">← 返回列表</a></div>
 <?php if ($error !== ''): ?><div class="alert error"><span>!</span><?= h($error) ?></div><?php endif; ?>
 <form class="card" method="post" enctype="multipart/form-data" data-task-form>
 <input type="hidden" name="csrf_token" value="<?= h(csrf_token()) ?>">

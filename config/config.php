@@ -23,6 +23,11 @@ return [
         // 允许 get_task.php?include_base64=1 在 JSON 中直接携带 PDF；大文件建议使用 download_url。
         'allow_base64' => true,
     ],
+    'p_system' => [
+        // P 系统上线后填写完整接收地址；留空时使用本项目的模拟 P 系统。
+        'endpoint' => '',
+        'timeout_seconds' => 10,
+    ],
     'upload' => [
         'max_files' => 10,
         'max_file_size_mb' => 30,

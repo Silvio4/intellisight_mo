@@ -7,9 +7,9 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
 }
 $payload = request_payload();
 write_app_log('api', '【请求P系统接口原始数据】', ['data' => $payload]);
-$taskId = parse_task_id($payload['intellisight_id'] ?? $payload['id'] ?? $payload['task_id'] ?? 0);
+$taskId = parse_task_id($payload['task_id'] ?? 0);
 if ($taskId < 1) {
-    json_response(['success' => false, 'message' => '缺少有效的 intellisight_id。'], 422);
+    json_response(['success' => false, 'message' => '缺少有效的 task_id。'], 422);
 }
 
 try {
@@ -17,11 +17,11 @@ try {
     json_response([
         'success' => true,
         'message' => '已请求模拟 P 系统',
-        'task_id' => format_task_no($taskId),
+        'task_id' => $taskId,
         'status' => 4,
         'status_text' => status_label(4),
-        'data' => $result['payload']['data'],
-        'mock_url' => $result['mock_url'],
+        'data' => $result['payload'],
+        'mock_url' => $result['mock_url'] ?? null,
     ]);
 } catch (RuntimeException $e) {
     json_response(['success' => false, 'message' => $e->getMessage()], 409);

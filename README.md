@@ -28,19 +28,21 @@ PHP + MySQL 5.7 合同识别系统，部署路径默认为 `/intellisight_mo`。
 
 `GET|POST /api/get_task.php`
 
-响应与智眸既有系统保持一致：无任务时返回 `success`、`has_task=false`、`message`；成功时 `task` 包含 `id`、数值 `status`、`status_text`、`created_at`、`created_by_mail`、`contract_quote_epo_file` 和 `contract_quote_epo_url`。系统同时最多派发一条状态 `3` 的任务。
+无任务时返回 `success`、`has_task=false`、`message`；成功时 `task` 包含统一命名的数值型 `task_id`、`status`、`status_text`、`created_at`、`created_by_mail`、`contract_quote_epo_file` 和 `contract_quote_epo_url`。系统同时最多派发一条状态 `3` 的任务。
 
 ### 回传识别结果
 
-`POST /api/returndata.php`，JSON 请求使用 `id`（兼容 `task_id` / `task_no`）标识任务，并可包含：`po_no`、`delivery_address`、`no`、`vendor_part_no`、`description`、`qty`、`unit_cost`、`discount`。明细字段使用英文分号分隔。保存识别结果后会立即进入 P 系统流程，状态更新为 `4`（匹配中），响应会返回 `p_system_mock_url`。
+`POST /api/returndata.php` 使用数值型 `task_id` 标识任务，支持 11 个识别字段：`po_no`、`customer_name`、`customer_delivery_address`、`end_user_name`、`end_user_contact`、`end_user_email`、`vendor_part_no`、`description`、`qty`、`price_currency`、`unit_price`。后五项是数量一致、按位置对应的英文分号分隔多值字段。保存后立即以相同格式请求 P 系统，请求成功后状态更新为 `4`（匹配中）。
 
 ### P 系统（含当前模拟流程）
 
-- `POST /api/submit_p_sys.php`：按 `intellisight_id`（例如 `T000001`）读取识别结果并请求 P 系统；请求体和响应中的 `data` 都包含 `intellisight_id`。当前响应返回模拟页面 `mock_url`。
-- `/p_system_mock.php?id=1`：登录后打开模拟 P 系统，为每一行 Vendor Part No. / Description 输入 UPC Code 并提交。
-- `POST /api/p_sys_back.php`：接收 P 系统返回。请求格式为 `{"data":{"intellisight_id":"T000001","upc_code":["...","..."]}}`，保存至任务的 `upc_code` 字段，状态更新为 `5`（待传输）。
+- `POST /api/submit_p_sys.php`：按 `task_id` 读取识别结果并请求 P 系统。真实地址配置在 `p_system.endpoint`；留空时返回模拟页面 `mock_url`。
+- `/p_system_mock.php?id=1`：登录后打开模拟 P 系统，为每一行填写 PID，并填写 P 系统链接。
+- `POST /api/p_sys_back.php`：接收原 P 系统请求格式加 `pid` 和 `p_sys_link` 的返回，保存后状态更新为 `5`（待传输）。
 
 已有数据库请先执行 `database_migration_p_system.sql`；全新安装直接使用 `database.sql`。
+
+完整格式参见 `智眸任务获取和返回数据接口.md` 与 `智眸P系统返回接口.md`。
 
 每个接口独立写入 `api/logs/<接口名>_YYYY-MM-DD.log`；网页日志写入根目录 `logs/`。
 

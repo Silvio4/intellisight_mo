@@ -18,10 +18,10 @@ function split_result_value($value): array
 $lineItems = [];
 if ($result) {
     $columns = [];
-    foreach (['no','vendor_part_no','description','qty','unit_cost','upc_code'] as $field) $columns[$field] = split_result_value($result[$field]);
+    foreach (['vendor_part_no','description','qty','price_currency','unit_price','pid'] as $field) $columns[$field] = split_result_value($result[$field]);
     $columnCounts = array_map('count', $columns);
     $rowCount = $columnCounts ? max($columnCounts) : 0;
-    for ($i=0;$i<$rowCount;$i++) $lineItems[]=['no'=>$columns['no'][$i]??'','vendor_part_no'=>$columns['vendor_part_no'][$i]??'','description'=>$columns['description'][$i]??'','qty'=>$columns['qty'][$i]??'','unit_cost'=>$columns['unit_cost'][$i]??'','upc_code'=>$columns['upc_code'][$i]??''];
+    for ($i=0;$i<$rowCount;$i++) $lineItems[]=['vendor_part_no'=>$columns['vendor_part_no'][$i]??'','description'=>$columns['description'][$i]??'','qty'=>$columns['qty'][$i]??'','price_currency'=>$columns['price_currency'][$i]??'','unit_price'=>$columns['unit_price'][$i]??'','pid'=>$columns['pid'][$i]??''];
 }
 
 $pageTitle = '任务详情';
@@ -71,15 +71,19 @@ require __DIR__ . '/includes/layout_top.php';
         <?php else: ?>
             <div class="info-grid" style="margin-bottom:20px">
                 <div class="info-item"><label>PO No.</label><div><?= h($result['po_no'] ?: '—') ?></div></div>
-                <div class="info-item"><label>Discount</label><div><?= h($result['discount'] !== null && $result['discount'] !== '' ? $result['discount'] : '—') ?></div></div>
-                <div class="info-item full"><label>Delivery Address</label><div><?= nl2br(h($result['delivery_address'] ?: '—')) ?></div></div>
+                <div class="info-item"><label>Customer Name</label><div><?= h($result['customer_name'] ?: '—') ?></div></div>
+                <div class="info-item full"><label>Customer Delivery Address</label><div><?= nl2br(h($result['customer_delivery_address'] ?: '—')) ?></div></div>
+                <div class="info-item"><label>End User Name</label><div><?= h($result['end_user_name'] ?: '—') ?></div></div>
+                <div class="info-item"><label>End User Contact</label><div><?= h($result['end_user_contact'] ?: '—') ?></div></div>
+                <div class="info-item"><label>End User Email</label><div><?= h($result['end_user_email'] ?: '—') ?></div></div>
+                <?php if (!empty($result['p_sys_link'])): ?><div class="info-item full"><label>P System Link</label><div><a href="<?= h($result['p_sys_link']) ?>" target="_blank" rel="noopener noreferrer"><?= h($result['p_sys_link']) ?></a></div></div><?php endif; ?>
             </div>
             <div class="table-wrap">
                 <table class="data-table result-table">
-                    <thead><tr><th>No.</th><th>Vendor Part No.</th><th>Description</th><th>Qty</th><th>Unit Cost</th><th>UPC Code</th></tr></thead>
+                    <thead><tr><th>Vendor Part No.</th><th>Description</th><th>Qty</th><th>Price Currency</th><th>Unit Price</th><th>PID</th></tr></thead>
                     <tbody>
                     <?php if (!$lineItems): ?><tr><td colspan="6" style="text-align:center;color:#929bab">接口未返回明细行</td></tr><?php endif; ?>
-                    <?php foreach ($lineItems as $item): ?><tr><td><?= h($item['no']) ?></td><td><?= h($item['vendor_part_no']) ?></td><td><?= h($item['description']) ?></td><td><?= h($item['qty']) ?></td><td><?= h($item['unit_cost']) ?></td><td><?= h($item['upc_code'] ?: '—') ?></td></tr><?php endforeach; ?>
+                    <?php foreach ($lineItems as $item): ?><tr><td><?= h($item['vendor_part_no']) ?></td><td><?= h($item['description']) ?></td><td><?= h($item['qty']) ?></td><td><?= h($item['price_currency']) ?></td><td><?= h($item['unit_price']) ?></td><td><?= h($item['pid'] ?: '—') ?></td></tr><?php endforeach; ?>
                     </tbody>
                 </table>
             </div>

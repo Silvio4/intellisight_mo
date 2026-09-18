@@ -106,6 +106,8 @@ function json_response(array $data, int $status = 200): void
         'success' => $data['success'] ?? null,
         'code' => $data['code'] ?? null,
         'task_id' => $data['task_id'] ?? ($data['task']['task_id'] ?? null),
+        'has_task' => $data['has_task'] ?? null,
+        'recognizing_task_id' => $data['recognizing_task_id'] ?? null,
     ]);
     http_response_code($status);
     header('Content-Type: application/json; charset=utf-8');

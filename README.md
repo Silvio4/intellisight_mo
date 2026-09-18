@@ -28,7 +28,7 @@ PHP + MySQL 5.7 合同识别系统，部署路径默认为 `/intellisight_mo`。
 
 `GET|POST /api/get_task.php`
 
-无任务时返回 `success`、`has_task=false`、`message`；成功时 `task` 包含统一命名的数值型 `task_id`、`status`、`status_text`、`created_at`、`created_by_mail`、`contract_quote_epo_file` 和 `contract_quote_epo_url`。系统同时最多派发一条状态 `3` 的任务。
+无任务时返回 `success`、`has_task=false`、`message`；成功时顶层返回数值型 `task_id`，`task` 中也保留 `task_id`，并包含 `status`、`status_text`、`created_at`、`created_by_mail`、`contract_quote_epo_file` 和 `contract_quote_epo_url`。调用方应在读取 `task_id` 前判断 `has_task`。系统同时最多派发一条状态 `3` 的任务。
 
 ### 回传识别结果
 

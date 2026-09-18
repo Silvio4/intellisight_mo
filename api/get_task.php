@@ -24,7 +24,22 @@ try {
     $log=$pdo->prepare("INSERT INTO logs (operator,task_id,operation_time,operation_content,task_status) VALUES ('API:get_task',:task_id,NOW(),'开始识别',3)");
     $log->execute([':task_id'=>(int)$task['id']]);
     $pdo->commit();$file=(string)$task['attachment_contract_quote_epo'];
-    json_response(['success'=>true,'has_task'=>true,'task'=>['task_id'=>(int)$task['id'],'status'=>3,'status_text'=>status_label(3),'created_at'=>$task['created_at'],'created_by_mail'=>(string)($task['created_by_mail']??''),'contract_quote_epo_file'=>$file,'contract_quote_epo_url'=>file_download_url((string)$task['id'],$file)]]);
+    $taskId=(int)$task['id'];
+    json_response([
+        'success'=>true,
+        'has_task'=>true,
+        // 保留顶层 task_id，兼容按其他任务接口格式读取 response.task_id 的调用方。
+        'task_id'=>$taskId,
+        'task'=>[
+            'task_id'=>$taskId,
+            'status'=>3,
+            'status_text'=>status_label(3),
+            'created_at'=>$task['created_at'],
+            'created_by_mail'=>(string)($task['created_by_mail']??''),
+            'contract_quote_epo_file'=>$file,
+            'contract_quote_epo_url'=>file_download_url((string)$taskId,$file),
+        ],
+    ]);
 } catch(Throwable $e) {
     if($pdo->inTransaction())$pdo->rollBack();
     json_response(['success'=>false,'message'=>'获取待识别任务失败','error'=>$e->getMessage()],500);

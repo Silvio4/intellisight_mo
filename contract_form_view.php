@@ -9,6 +9,9 @@ $task = $stmt->fetch();
 if (!$task) { http_response_code(404); exit('任务不存在'); }
 $result = ($task['po_no'] !== '' || $task['recognition_finished_at'] !== null) ? $task : null;
 $files = $task['attachment_contract_quote_epo'] ? [$task] : [];
+$costingSheetName = 'costing_sheet_' . format_task_no($taskId) . '.xlsx';
+$costingSheetPath = __DIR__ . '/files/costing_sheet/' . $costingSheetName;
+$hasCostingSheet = is_file($costingSheetPath);
 
 function split_result_value($value): array
 {
@@ -49,7 +52,7 @@ require __DIR__ . '/includes/layout_top.php';
     </section>
 
     <section class="card">
-        <div class="card-head"><h3>任务文件</h3><span style="color:#929bab"><?= count($files) ?> 份</span></div>
+        <div class="card-head"><h3>任务文件</h3><span style="color:#929bab"><?= count($files) + ($hasCostingSheet ? 1 : 0) ?> 份</span></div>
         <div class="card-body">
             <?php foreach ($files as $file): ?>
                 <div class="file-download">
@@ -59,6 +62,13 @@ require __DIR__ . '/includes/layout_top.php';
                     <a class="btn btn-primary btn-sm" href="<?= h(app_url('download.php?id=' . (int)$file['id'] . '&type=pdf')) ?>">PDF</a>
                 </div>
             <?php endforeach; ?>
+            <?php if ($hasCostingSheet): ?>
+                <div class="file-download">
+                    <span class="file-type">XLSX</span>
+                    <span class="file-meta"><b><?= h($costingSheetName) ?></b><small><?= number_format(filesize($costingSheetPath) / 1024, 1) ?> KB · Costing Sheet</small></span>
+                    <a class="btn btn-primary btn-sm" href="<?= h(app_url('download.php?id=' . $taskId . '&type=costing_sheet')) ?>">下载</a>
+                </div>
+            <?php endif; ?>
         </div>
     </section>
 </div>

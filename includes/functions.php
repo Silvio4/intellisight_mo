@@ -72,7 +72,7 @@ function take_flash(): ?array
 function status_label($status): string
 {
     $map = [
-        1 => '草稿中', 2 => '待识别', 3 => '识别中', 4 => '匹配中', 5 => '待传输', 6 => '已完成',
+        1 => '草稿中', 2 => '待识别', 3 => '识别中', 4 => '匹配中', 5 => '待建表', 6 => '已完成',
     ];
     return $map[$status] ?? $status;
 }

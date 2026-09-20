@@ -91,8 +91,6 @@ require __DIR__ . '/includes/layout_top.php';
     </div>
 </section>
 
-<?php if ((int)$task['status'] === 4): ?><div style="margin-top:16px;text-align:right"><a class="btn btn-primary" href="<?= h(app_url('p_system_mock.php?id=' . $taskId)) ?>">打开模拟 P 系统</a></div><?php endif; ?>
-
 <?php if ($result && !empty($task['raw_result'])): ?>
 <section class="card" style="margin-top:20px">
     <div class="card-head"><h3>接口原始数据</h3><span style="color:#929bab">用于排查和追溯</span></div>

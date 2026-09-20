@@ -10,3 +10,8 @@ ALTER TABLE `contract_forms`
   ADD COLUMN `unit_price` TEXT NULL COMMENT '单价，分号分隔' AFTER `price_currency`,
   ADD COLUMN `pid` TEXT NULL COMMENT 'P系统物料ID，分号分隔' AFTER `unit_price`,
   ADD COLUMN `p_sys_link` TEXT NULL COMMENT 'P系统返回链接' AFTER `pid`;
+
+-- 状态 5 在本流程中表示 P 系统已成功回传，等待创建 costing sheet。
+ALTER TABLE `contract_forms`
+  MODIFY COLUMN `status` TINYINT UNSIGNED NOT NULL DEFAULT 1
+  COMMENT '1草稿中 2待识别 3识别中 4匹配中 5待建表 6已完成';

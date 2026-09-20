@@ -16,12 +16,12 @@ try {
     $result = submit_task_to_p_system($taskId);
     json_response([
         'success' => true,
-        'message' => '已请求模拟 P 系统',
+        'message' => 'P 系统已接收任务。',
         'task_id' => $taskId,
         'status' => 4,
         'status_text' => status_label(4),
         'data' => $result['payload'],
-        'mock_url' => $result['mock_url'] ?? null,
+        'p_system_response' => $result['response'],
     ]);
 } catch (RuntimeException $e) {
     json_response(['success' => false, 'message' => $e->getMessage()], 409);

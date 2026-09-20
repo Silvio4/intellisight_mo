@@ -10,7 +10,7 @@ PHP + MySQL 5.7 合同识别系统，部署路径默认为 `/intellisight_mo`。
 - `contract_forms`：任务、Sales Person、附件、识别结果、UPC 匹配结果及所有流程时间。数据库使用自增 `id`，界面显示为 `T` + 6 位数字；
 - `logs`：任务操作记录，包含操作人、任务 ID、操作时间、操作内容和操作后状态。
 
-任务状态为：`1` 草稿中、`2` 待识别、`3` 识别中、`4` 匹配中、`5` 待传输、`6` 已完成。
+任务状态为：`1` 草稿中、`2` 待识别、`3` 识别中、`4` 匹配中、`5` 待建表、`6` 已完成。
 执行脚本前请备份旧数据；脚本会删除旧版 `contract_tasks`、`contract_task_files` 和 `contract_form`。
 
 ## 部署
@@ -34,11 +34,11 @@ PHP + MySQL 5.7 合同识别系统，部署路径默认为 `/intellisight_mo`。
 
 `POST /api/returndata.php` 使用数值型 `task_id` 标识任务，支持 11 个识别字段：`po_no`、`customer_name`、`customer_delivery_address`、`end_user_name`、`end_user_contact`、`end_user_email`、`vendor_part_no`、`description`、`qty`、`price_currency`、`unit_price`。后五项是数量一致、按位置对应的英文分号分隔多值字段。保存后立即以相同格式请求 P 系统，请求成功后状态更新为 `4`（匹配中）。
 
-### P 系统（含当前模拟流程）
+### P 系统
 
-- `POST /api/submit_p_sys.php`：按 `task_id` 读取识别结果并请求 P 系统。真实地址配置在 `p_system.endpoint`；留空时返回模拟页面 `mock_url`。
-- `/p_system_mock.php?id=1`：登录后打开模拟 P 系统，为每一行填写 PID，并填写 P 系统链接。
-- `POST /api/p_sys_back.php`：接收原 P 系统请求格式加 `pid` 和 `p_sys_link` 的返回，保存后状态更新为 `5`（待传输）。
+- 识别结果保存后，系统自动向 `POST http://10.106.4.46:12332/api/tasks` 推送任务；P 系统确认接收后任务更新为 `4`（匹配中）。端口可用 `P_SYS_PORT` 覆盖，完整地址可用 `P_SYS_ENDPOINT` 覆盖。
+- `POST /api/submit_p_sys.php`：按 `task_id` 手动重试向 P 系统推送状态仍为 `3` 的任务。
+- `POST /api/p_sys_back.php`：接收 P 系统以 `data` 包裹的原任务字段、`pid` 和 `p_sys_link`；成功保存后任务更新为 `5`（待建表，即等待创建 costing sheet）。
 
 已有数据库请先执行 `database_migration_p_system.sql`；全新安装直接使用 `database.sql`。
 

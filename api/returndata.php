@@ -82,7 +82,7 @@ try {
         'task_id' => $taskId,
         'status' => 4,
         'status_text' => status_label(4),
-        'p_system_mock_url' => $pResult['mock_url'] ?? null,
+        'p_system_response' => $pResult['response'],
     ]);
 } catch (Throwable $e) {
     if ($pdo->inTransaction()) $pdo->rollBack();

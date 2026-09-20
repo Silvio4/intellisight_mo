@@ -14,9 +14,12 @@ function p_system_payload(array $task): array
     return $data;
 }
 
-function post_to_p_system(string $endpoint, array $payload, int $timeout): void
+function post_to_p_system(string $endpoint, array $payload, int $timeout): array
 {
     $body = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    if ($body === false) {
+        throw new RuntimeException('P 系统请求数据无法编码。');
+    }
     $context = stream_context_create(['http' => [
         'method' => 'POST',
         'header' => "Content-Type: application/json; charset=utf-8\r\nAccept: application/json\r\n",
@@ -27,8 +30,19 @@ function post_to_p_system(string $endpoint, array $payload, int $timeout): void
     $response = @file_get_contents($endpoint, false, $context);
     $statusLine = $http_response_header[0] ?? '';
     if ($response === false || !preg_match('/\s2\d\d\s/', $statusLine)) {
-        throw new RuntimeException('P 系统请求失败：' . ($statusLine ?: '无法连接'));
+        $error = json_decode((string)$response, true);
+        $reason = is_array($error) && !empty($error['message'])
+            ? (string)$error['message']
+            : ($statusLine ?: '无法连接');
+        throw new RuntimeException('P 系统请求失败：' . $reason);
     }
+
+    $result = json_decode($response, true);
+    if (!is_array($result) || ($result['success'] ?? false) !== true) {
+        $reason = is_array($result) && !empty($result['message']) ? (string)$result['message'] : '响应格式不正确';
+        throw new RuntimeException('P 系统未确认接收任务：' . $reason);
+    }
+    return $result;
 }
 
 function submit_task_to_p_system(int $taskId): array
@@ -38,14 +52,16 @@ function submit_task_to_p_system(int $taskId): array
     $stmt->execute([':id' => $taskId]);
     $task = $stmt->fetch();
     if (!$task) throw new RuntimeException('找不到对应任务。');
-    if ((int)$task['status'] < 3) throw new RuntimeException('任务尚未完成识别，不能请求 P 系统。');
+    if ((int)$task['status'] !== 3) throw new RuntimeException('仅识别中的任务可以请求 P 系统。');
 
     $payload = p_system_payload($task);
     write_app_log('api', '【请求P系统原始数据】', $payload);
     $endpoint = trim((string)config_value('p_system.endpoint', ''));
-    if ($endpoint !== '') {
-        post_to_p_system($endpoint, $payload, max(1, (int)config_value('p_system.timeout_seconds', 10)));
+    if ($endpoint === '') {
+        throw new RuntimeException('未配置 P 系统任务接收地址。');
     }
+    $response = post_to_p_system($endpoint, $payload, max(1, (int)config_value('p_system.timeout_seconds', 10)));
+    write_app_log('api', '【P系统接收响应】', $response);
 
     $pdo->beginTransaction();
     try {
@@ -61,6 +77,6 @@ function submit_task_to_p_system(int $taskId): array
 
     return [
         'payload' => $payload,
-        'mock_url' => $endpoint === '' ? absolute_app_url('p_system_mock.php?id=' . $taskId) : null,
+        'response' => $response,
     ];
 }

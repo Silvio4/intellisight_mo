@@ -24,8 +24,11 @@ return [
         'allow_base64' => true,
     ],
     'p_system' => [
-        // P 系统上线后填写完整接收地址；留空时使用本项目的模拟 P 系统。
-        'endpoint' => '',
+        // 可通过环境变量覆盖地址；P_SYS_PORT 与 P 系统服务端的配置同名。
+        'endpoint' => getenv('P_SYS_ENDPOINT') ?: sprintf(
+            'http://10.106.4.46:%s/api/tasks',
+            getenv('P_SYS_PORT') ?: '12332'
+        ),
         'timeout_seconds' => 10,
     ],
     'upload' => [

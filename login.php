@@ -17,7 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = '请输入用户名和密码';
     } else {
         try {
-            $stmt = db()->prepare('SELECT id, username, password, name, email, status FROM users WHERE username = :username LIMIT 1');
+            $stmt = db()->prepare('SELECT id, username, password, name, email, role, status FROM users WHERE username = :username LIMIT 1');
             $stmt->execute([':username' => $username]);
             $user = $stmt->fetch();
             $verified = false;
@@ -45,6 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['username'] = (string)$user['username'];
                 $_SESSION['name'] = (string)($user['name'] ?: $user['username']);
                 $_SESSION['email'] = (string)($user['email'] ?? '');
+                $_SESSION['role'] = (string)($user['role'] ?? 'submitter');
                 if (!empty($_POST['remember'])) {
                     setcookie('intellisight_mo_username', $username, time() + 2592000, app_url('/') ?: '/', '', !empty($_SERVER['HTTPS']), true);
                 } else {

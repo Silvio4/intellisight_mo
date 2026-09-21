@@ -1,5 +1,12 @@
 # 更新记录
 
+## v0.4
+
+- 将 Costing Sheet 生成后的任务转入“待审批”，新增审批订单列表、审批详情、同意、退回及建单重试。
+- 新增提交用户修改退回订单、补充附件、重新生成 Costing Sheet 和再次提交审批流程。
+- 接入 ePortal `createTicket`，以 `data` JSON、`att2` Costing Sheet 和 `files[]` 补充附件发起 multipart 请求。
+- 任务状态扩展为十个统一的三字状态，并增加角色、审批历史、附件和 ePortal 审计字段迁移。
+
 ## v0.3
 
 - 取消 `api/get_task.php` 的 API Key 鉴权，解决未携带 Key 时返回 HTTP 401 的问题。

@@ -6,3 +6,11 @@ if (empty($_SESSION['user_id'])) {
     header('Location: ' . app_url('login.php') . '?return=' . rawurlencode($return));
     exit;
 }
+
+function require_approver(): void
+{
+    if (!can_approve_orders()) {
+        http_response_code(403);
+        exit('无权访问审批订单。');
+    }
+}

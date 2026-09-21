@@ -39,7 +39,7 @@ P 系统应在智眸发送的原请求数据基础上增加 `pid` 和 `p_sys_lin
 | `pid` | 必填，多值字段；英文分号分隔，数量必须与五个识别明细字段一致，并按位置一一对应 |
 | `p_sys_link` | 必填，P 系统任务或处理结果链接 |
 
-接口只接受状态为 `4`（匹配中）的任务。成功保存 `pid` 和 `p_sys_link` 后，系统会使用 `template/costing_sheet_v1.xlsx` 立即生成 Costing Sheet；生成成功后任务状态更新为 `6`（已建表）。如果生成失败，任务保持状态 `5`（待建表），可调用 `POST /api/costing_sheet.php` 并传入 `task_id` 重试。
+接口只接受状态为 `4`（匹配中）的任务。成功保存 `pid` 和 `p_sys_link` 后，系统会使用 `template/costing_sheet_v1.xlsx` 立即生成 Costing Sheet；生成成功后任务状态更新为 `6`（待审批）。如果生成失败，任务保持状态 `5`（待建表），可调用 `POST /api/costing_sheet.php` 并传入 `task_id` 重试。
 
 ### 成功响应
 
@@ -49,7 +49,7 @@ P 系统应在智眸发送的原请求数据基础上增加 `pid` 和 `p_sys_lin
   "message": "P 系统匹配结果已保存，Costing Sheet 已生成。",
   "task_id": 26,
   "status": 6,
-  "status_text": "已建表",
+  "status_text": "待审批",
   "costing_sheet": "costing_sheet_T000026.xlsx"
 }
 ```

@@ -1,5 +1,6 @@
 <?php
 require __DIR__ . '/../includes/bootstrap.php';
+require_once __DIR__ . '/../includes/costing_sheet.php';
 
 if (strtoupper($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
     json_response(['success' => false, 'message' => '仅支持 POST。'], 405);
@@ -61,9 +62,29 @@ try {
     $log = $pdo->prepare("INSERT INTO logs (operator,task_id,operation_time,operation_content,task_status) VALUES ('API:p_sys_back',:task_id,NOW(),'P系统匹配结果返回',5)");
     $log->execute([':task_id' => $taskId]);
     $pdo->commit();
-    json_response(['success' => true, 'message' => 'P 系统匹配结果已保存。', 'task_id' => $taskId, 'status' => 5, 'status_text' => status_label(5)]);
 } catch (Throwable $e) {
     if ($pdo->inTransaction()) $pdo->rollBack();
     write_app_log('api', '保存P系统返回失败', ['task_id' => $taskId, 'error' => $e->getMessage()]);
     json_response(['success' => false, 'message' => 'P 系统返回保存失败。'], 500);
+}
+
+try {
+    $costingSheet = generate_costing_sheet($taskId);
+    json_response([
+        'success' => true,
+        'message' => 'P 系统匹配结果已保存，Costing Sheet 已生成。',
+        'task_id' => $taskId,
+        'status' => 6,
+        'status_text' => status_label(6),
+        'costing_sheet' => $costingSheet['filename'],
+    ]);
+} catch (Throwable $e) {
+    write_app_log('api', 'P系统返回后生成Costing Sheet失败', ['task_id' => $taskId, 'error' => $e->getMessage()]);
+    json_response([
+        'success' => false,
+        'message' => 'P 系统匹配结果已保存，但 Costing Sheet 生成失败：' . $e->getMessage(),
+        'task_id' => $taskId,
+        'status' => 5,
+        'status_text' => status_label(5),
+    ], 500);
 }

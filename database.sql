@@ -30,7 +30,7 @@ CREATE TABLE `contract_forms` (
   `created_by_name` VARCHAR(120) NOT NULL DEFAULT '' COMMENT '创建人名字快照',
   `created_by_mail` VARCHAR(190) NOT NULL DEFAULT '' COMMENT '创建人邮箱快照',
   `sales_person` VARCHAR(120) NOT NULL DEFAULT '' COMMENT '销售人员',
-  `status` TINYINT UNSIGNED NOT NULL DEFAULT 1 COMMENT '1草稿中 2待识别 3识别中 4匹配中 5待建表 6已完成',
+  `status` TINYINT UNSIGNED NOT NULL DEFAULT 1 COMMENT '1草稿中 2待识别 3识别中 4匹配中 5待建表 6已建表',
   `attachment_original_name` VARCHAR(255) DEFAULT NULL COMMENT '上传时文件名',
   `attachment_source_file` VARCHAR(255) DEFAULT NULL COMMENT '保存的原文件名',
   `attachment_contract_quote_epo` VARCHAR(255) DEFAULT NULL COMMENT '识别用PDF文件名',

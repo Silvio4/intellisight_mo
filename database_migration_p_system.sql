@@ -14,4 +14,4 @@ ALTER TABLE `contract_forms`
 -- 状态 5 在本流程中表示 P 系统已成功回传，等待创建 costing sheet。
 ALTER TABLE `contract_forms`
   MODIFY COLUMN `status` TINYINT UNSIGNED NOT NULL DEFAULT 1
-  COMMENT '1草稿中 2待识别 3识别中 4匹配中 5待建表 6已完成';
+  COMMENT '1草稿中 2待识别 3识别中 4匹配中 5待建表 6已建表';

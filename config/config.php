@@ -31,6 +31,13 @@ return [
         ),
         'timeout_seconds' => 10,
     ],
+    'eportal' => [
+        'endpoint' => getenv('EPORTAL_ENDPOINT') ?: 'http://10.106.4.174/mo.php/api/createTicket',
+        'timeout_seconds' => (int)(getenv('EPORTAL_TIMEOUT_SECONDS') ?: 30),
+        'node_id' => 'JOSM',
+        'biz_category' => 'Product',
+        'gst_rate' => 7,
+    ],
     'upload' => [
         'max_files' => 10,
         'max_file_size_mb' => 30,

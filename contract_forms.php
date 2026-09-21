@@ -3,7 +3,8 @@ require __DIR__ . '/includes/auth.php';
 
 $pageTitle = '合同表单';
 $pdo = db();
-$s = $pdo->query('SELECT COUNT(*) total, SUM(status=2) pending, SUM(status IN (3,4)) processing, SUM(status=6) completed FROM contract_forms')->fetch();
+$summaryWhere = current_user_role() === 'submitter' ? ' WHERE created_by=' . (int)$_SESSION['user_id'] : '';
+$s = $pdo->query('SELECT COUNT(*) total, SUM(status=2) pending, SUM(status IN (3,4,5,6,8)) processing, SUM(status=9) completed FROM contract_forms' . $summaryWhere)->fetch();
 $summary = [
     'total' => (int)($s['total'] ?? 0),
     'pending' => (int)($s['pending'] ?? 0),
@@ -14,10 +15,14 @@ $summary = [
 $taskId = trim((string)($_GET['id'] ?? ''));
 $creator = trim((string)($_GET['creator'] ?? ''));
 $status = (int)($_GET['status'] ?? 0);
-if ($status < 1 || $status > 6) $status = 0;
+if ($status < 1 || $status > 10) $status = 0;
 
 $where = [];
 $params = [];
+if (current_user_role() === 'submitter') {
+    $where[] = 'created_by=:current_user';
+    $params[':current_user'] = (int)$_SESSION['user_id'];
+}
 if ($taskId !== '' && parse_task_id($taskId) > 0) {
     $where[] = 'id=:id';
     $params[':id'] = parse_task_id($taskId);
@@ -39,7 +44,7 @@ $count->execute($params);
 $totalRows = (int)$count->fetchColumn();
 $totalPages = max(1, (int)ceil($totalRows / $pageSize));
 $page = min($page, $totalPages);
-$stmt = $pdo->prepare('SELECT * FROM contract_forms' . $whereSql . ' ORDER BY id DESC LIMIT :limit OFFSET :offset');
+$stmt = $pdo->prepare('SELECT * FROM contract_forms' . $whereSql . ' ORDER BY (status=7) DESC,CASE WHEN status=7 THEN rejected_at END DESC,id DESC LIMIT :limit OFFSET :offset');
 foreach ($params as $key => $value) $stmt->bindValue($key, $value, is_int($value) ? PDO::PARAM_INT : PDO::PARAM_STR);
 $stmt->bindValue(':limit', $pageSize, PDO::PARAM_INT);
 $stmt->bindValue(':offset', ($page - 1) * $pageSize, PDO::PARAM_INT);
@@ -116,7 +121,7 @@ require __DIR__ . '/includes/layout_top.php';
                                 <label for="filter-status">任务状态</label>
                                 <select class="form-control" id="filter-status" name="status">
                                     <option value="">全部状态</option>
-                                    <?php for ($i = 1; $i <= 6; $i++): ?><option value="<?= $i ?>" <?= $status === $i ? 'selected' : '' ?>><?= h(status_label($i)) ?></option><?php endfor; ?>
+                                    <?php for ($i = 1; $i <= 10; $i++): ?><option value="<?= $i ?>" <?= $status === $i ? 'selected' : '' ?>><?= h(status_label($i)) ?></option><?php endfor; ?>
                                 </select>
                                 <div class="column-filter-actions"><a href="<?= h(filter_reset_url('status')) ?>">清除</a><button class="btn btn-primary btn-sm">确认</button></div>
                             </form>
@@ -124,11 +129,11 @@ require __DIR__ . '/includes/layout_top.php';
                     </th>
                     <th>完成时间</th><th>操作</th>
                 </tr></thead>
-                <tbody><?php foreach ($tasks as $task): ?><tr>
+                <tbody><?php foreach ($tasks as $task): ?><tr class="<?= (int)$task['status'] === 7 ? 'row-rejected' : '' ?>">
                     <td><a class="task-link" href="<?= h(app_url('contract_form_view.php?id=' . (int)$task['id'])) ?>"><?= h(format_task_no($task['id'])) ?></a></td>
                     <td><?= h($task['sales_person'] ?: '—') ?></td><td><?= h($task['attachment_original_name'] ?: '—') ?></td><td><?= h($task['created_by_name']) ?></td><td><?= h($task['created_at']) ?></td>
                     <td><span class="status-badge <?= h(status_class($task['status'])) ?>"><?= h(status_label($task['status'])) ?></span></td>
-                    <td><?= h($task['completed_at'] ?: '—') ?></td><td><a class="btn btn-secondary btn-sm" href="<?= h(app_url('contract_form_view.php?id=' . (int)$task['id'])) ?>">查看详情</a></td>
+                    <td><?= h($task['completed_at'] ?: '—') ?></td><td><a class="btn btn-secondary btn-sm" href="<?= h(app_url('contract_form_view.php?id=' . (int)$task['id'])) ?>">查看详情</a><?php if ((int)$task['status'] === 7 && (int)$task['created_by'] === (int)$_SESSION['user_id']): ?> <a class="btn btn-danger btn-sm" href="<?= h(app_url('contract_form_edit.php?id=' . (int)$task['id'])) ?>">修改重提</a><?php endif; ?></td>
                 </tr><?php endforeach; ?></tbody>
             </table>
         </div>

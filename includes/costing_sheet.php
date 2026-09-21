@@ -223,14 +223,19 @@ function generate_costing_sheet(int $taskId): array
             $zip->close();
         }
 
+        if (is_file($destination) && !unlink($destination)) {
+            throw new RuntimeException('无法替换旧的 Costing Sheet。');
+        }
         if (!rename($temporaryFile, $destination)) {
             throw new RuntimeException('无法保存生成的 Costing Sheet。');
         }
         $temporaryFile = null;
-        $pdo->prepare('UPDATE contract_forms SET status=6,completed_at=NOW(),updated_at=NOW() WHERE id=:id')
+        $pdo->prepare('UPDATE contract_forms SET status=6,costing_sheet_generated_at=NOW(),submitted_approval_at=NOW(),approval_round=approval_round+1,completed_at=NULL,rejection_reason=NULL,updated_at=NOW() WHERE id=:id')
             ->execute([':id' => $taskId]);
-        $pdo->prepare("INSERT INTO logs (operator,task_id,operation_time,operation_content,task_status) VALUES ('API:costing_sheet',:task_id,NOW(),'生成 Costing Sheet',6)")
+        $pdo->prepare("INSERT INTO logs (operator,task_id,operation_time,operation_content,task_status) VALUES ('API:costing_sheet',:task_id,NOW(),'生成 Costing Sheet并提交审批',6)")
             ->execute([':task_id' => $taskId]);
+        $pdo->prepare("INSERT INTO contract_approvals (task_id,approval_round,action,operator_id,operator_name,created_at) SELECT id,approval_round,'submit',created_by,created_by_name,NOW() FROM contract_forms WHERE id=:id")
+            ->execute([':id' => $taskId]);
         $pdo->commit();
         return ['filename' => $filename, 'path' => $destination, 'generated' => true];
     } catch (Throwable $exception) {

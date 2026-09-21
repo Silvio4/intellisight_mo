@@ -7,11 +7,15 @@ $stmt = db()->prepare('SELECT * FROM contract_forms WHERE id = :id LIMIT 1');
 $stmt->execute([':id' => $taskId]);
 $task = $stmt->fetch();
 if (!$task) { http_response_code(404); exit('任务不存在'); }
+if (current_user_role() === 'submitter' && (int)$task['created_by'] !== (int)$_SESSION['user_id']) { http_response_code(403); exit('无权查看该任务'); }
 $result = ($task['po_no'] !== '' || $task['recognition_finished_at'] !== null) ? $task : null;
 $files = $task['attachment_contract_quote_epo'] ? [$task] : [];
 $costingSheetName = 'costing_sheet_' . format_task_no($taskId) . '.xlsx';
 $costingSheetPath = __DIR__ . '/files/costing_sheet/' . $costingSheetName;
 $hasCostingSheet = is_file($costingSheetPath);
+$supplementStmt = db()->prepare('SELECT * FROM contract_form_files WHERE task_id=:id ORDER BY id');
+$supplementStmt->execute([':id'=>$taskId]);
+$supplementFiles = $supplementStmt->fetchAll();
 
 function split_result_value($value): array
 {
@@ -32,7 +36,7 @@ require __DIR__ . '/includes/layout_top.php';
 ?>
 <div class="page-head">
     <div><h2><?= h(format_task_no($task['id'])) ?></h2><p>合同任务详情与识别结果</p></div>
-    <a class="btn btn-secondary" href="<?= h(app_url('contract_forms.php')) ?>">← 返回列表</a>
+    <div><?php if ((int)$task['status'] === 7 && ((int)$task['created_by'] === (int)$_SESSION['user_id'] || current_user_role() === 'admin')): ?><a class="btn btn-danger" href="<?= h(app_url('contract_form_edit.php?id=' . $taskId)) ?>">修改并重新提交</a><?php endif; ?> <a class="btn btn-secondary" href="<?= h(app_url('contract_forms.php')) ?>">← 返回列表</a></div>
 </div>
 
 <div class="detail-grid">
@@ -46,6 +50,7 @@ require __DIR__ . '/includes/layout_top.php';
                 <div class="info-item"><label>创建时间</label><div><?= h($task['created_at']) ?></div></div>
                 <div class="info-item"><label>开始识别时间</label><div><?= h($task['recognition_started_at'] ?: '—') ?></div></div>
                 <div class="info-item"><label>完成时间</label><div><?= h($task['completed_at'] ?: '—') ?></div></div>
+                <?php if (!empty($task['rejection_reason'])): ?><div class="info-item full"><label>退回理由</label><div class="danger-text"><?= h($task['rejection_reason']) ?></div></div><?php endif; ?>
                 <?php if (!empty($task['error_message'])): ?><div class="info-item full"><label>错误信息</label><div style="color:#c43f50"><?= h($task['error_message']) ?></div></div><?php endif; ?>
             </div>
         </div>
@@ -69,6 +74,9 @@ require __DIR__ . '/includes/layout_top.php';
                     <a class="btn btn-primary btn-sm" href="<?= h(app_url('download.php?id=' . $taskId . '&type=costing_sheet')) ?>">下载</a>
                 </div>
             <?php endif; ?>
+            <?php foreach ($supplementFiles as $supplement): ?>
+                <div class="file-download"><span class="file-type">附件</span><span class="file-meta"><b><?= h($supplement['original_name']) ?></b><small>补充附件 · 审批第 <?= (int)$supplement['approval_round'] ?> 轮</small></span><a class="btn btn-secondary btn-sm" href="<?= h(app_url('download.php?id=' . $taskId . '&type=supplement&file_id=' . (int)$supplement['id'])) ?>">下载</a></div>
+            <?php endforeach; ?>
         </div>
     </section>
 </div>

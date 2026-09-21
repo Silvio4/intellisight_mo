@@ -73,6 +73,7 @@ button, input, select, textarea { font: inherit; }
 .nav-icon { width: 24px; height: 24px; flex: 0 0 auto; }
 .nav-icon svg, .sidebar-toggle svg { width: 100%; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .nav-text { font-size: 15px; }
+.nav-badge { display: inline-grid; min-width: 20px; height: 20px; padding: 0 6px; place-items: center; border-radius: 10px; background: #d94a5a; color: #fff; font-size: 11px; }
 .sidebar.collapsed .brand-copy, .sidebar.collapsed .nav-text { display: none; }
 .sidebar.collapsed .brand { justify-content: center; padding: 0; }
 .sidebar-foot { padding: 20px 24px; color: #6f8499; font-size: 11px; white-space: nowrap; }
@@ -163,6 +164,8 @@ button, input, select, textarea { font: inherit; }
 .data-table td { padding: 15px 16px; border-bottom: 1px solid #edf0f4; vertical-align: middle; }
 .data-table tbody tr:hover { background: #fafbfe; }
 .data-table tbody tr:last-child td { border-bottom: 0; }
+.data-table tbody tr.row-rejected { background: #fff0f2; }
+.data-table tbody tr.row-rejected:hover { background: #ffe7eb; }
 .column-filter { position: relative; }
 .column-filter summary { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; list-style: none; user-select: none; }
 .column-filter summary::-webkit-details-marker { display: none; }
@@ -192,6 +195,9 @@ button, input, select, textarea { font: inherit; }
 .alert.success span { background: #25a36e; }
 .alert.error { background: #fff0f2; color: #ad3443; border: 1px solid #ffd7dd; }
 .alert.error span { background: #d34c5a; }
+.danger-text { color: var(--danger) !important; font-weight: 600; }
+.approval-actions { display: grid; grid-template-columns: auto minmax(320px, 1fr); gap: 20px; align-items: start; margin-top: 22px; padding-top: 20px; border-top: 1px solid var(--line); }
+.approval-actions form:last-child { display: grid; grid-template-columns: 1fr auto; gap: 10px; }
 
 .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
 .form-group.full { grid-column: 1 / -1; }
@@ -247,5 +253,6 @@ button, input, select, textarea { font: inherit; }
     .page-head { flex-direction: column; }
     .summary-grid, .form-grid, .info-grid { grid-template-columns: 1fr; }
     .form-group.full, .info-item.full { grid-column: auto; }
+    .approval-actions, .approval-actions form:last-child { grid-template-columns: 1fr; }
     .info-item:nth-child(odd) { padding-right: 0; }
 }

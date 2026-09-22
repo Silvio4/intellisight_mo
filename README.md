@@ -4,11 +4,12 @@ PHP + MySQL 5.7 合同识别系统，部署路径默认为 `/intellisight_mo`。
 
 ## 数据结构
 
-`database.sql` 是破坏性全量重建脚本，仅保留三张表：
+`database.sql` 是破坏性全量重建脚本，核心数据表包括：
 
 - `users`：登录用户；
 - `contract_forms`：任务、Sales Person、附件、识别结果、UPC 匹配结果及所有流程时间。数据库使用自增 `id`，界面显示为 `T` + 6 位数字；
 - `logs`：任务操作记录，包含操作人、任务 ID、操作时间、操作内容和操作后状态。
+- `dn_task_pool`：订单识别完成后上传的 DN 识别任务、文件及处理时间。
 
 ### 任务状态与流转条件
 
@@ -22,7 +23,7 @@ PHP + MySQL 5.7 合同识别系统，部署路径默认为 `/intellisight_mo`。
 
 1. 使用 MySQL 5.7+ 执行 `database.sql`。
 2. 修改 `config/config.php` 中的数据库连接与 `app.base_path`。
-3. 确保 Web 服务账号可写 `files/contract_forms/`、`logs/` 和 `api/logs/`。
+3. 确保 Web 服务账号可写 `files/contract_forms/`、`files/dn/`、`files/dn_done/`、`logs/` 和 `api/logs/`。
 4. 初始账号为 `admin` / `admin123`，首次登录会自动升级密码散列。
 
 应用需要 PHP 7.1+、`pdo_mysql` 和 `fileinfo`。Office 转 PDF 需要 LibreOffice；图片转换可使用 Imagick、ImageMagick 或 LibreOffice。
@@ -47,6 +48,12 @@ PHP + MySQL 5.7 合同识别系统，部署路径默认为 `/intellisight_mo`。
 - `POST /api/costing_sheet.php`：接收 `task_id`，可对状态 `5` 的任务重试生成 Costing Sheet。生成前需将模板放在 `template/costing_sheet_v1.xlsx`，输出保存于 `files/costing_sheet/costing_sheet_Txxxxxx.xlsx`，并会显示在任务详情的“任务文件”中。
 
 已有数据库应先执行 `database_migration_p_system.sql`（如尚未执行），再执行 `database_migration_approval_eportal.sql`；全新安装直接使用 `database.sql`。
+
+### DN 识别
+
+订单识别完成后，可在任务详情上传 PDF 格式的 DN。原文件保存到 `files/dn/`，命名为 `dn_任务号_yyyymmdd_序号.pdf`。`GET|POST /api/get_task_dn.php` 领取一条待识别任务；识别系统通过 `dn_file` 文件字段向 `POST /api/returndata_dn.php` 回传重新生成的 PDF，完成文件保存到 `files/dn_done/`。已有数据库需执行 `database_migration_dn.sql`。
+
+详细请求字段、响应示例、文件下载、状态码及日志说明参见 [智眸 DN 任务获取和返回文件接口](智眸DN任务获取和返回文件接口.md)。
 
 完整格式参见 `智眸任务获取和返回数据接口.md` 与 `智眸P系统返回接口.md`。
 

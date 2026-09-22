@@ -16,6 +16,10 @@ $hasCostingSheet = is_file($costingSheetPath);
 $supplementStmt = db()->prepare('SELECT * FROM contract_form_files WHERE task_id=:id ORDER BY id');
 $supplementStmt->execute([':id'=>$taskId]);
 $supplementFiles = $supplementStmt->fetchAll();
+$dnStmt = db()->prepare('SELECT * FROM dn_task_pool WHERE order_task_id=:id ORDER BY sequence_no');
+$dnStmt->execute([':id'=>$taskId]);
+$dnTasks = $dnStmt->fetchAll();
+$canUploadDn = $task['recognition_finished_at'] !== null;
 
 function split_result_value($value): array
 {
@@ -57,8 +61,9 @@ require __DIR__ . '/includes/layout_top.php';
     </section>
 
     <section class="card">
-        <div class="card-head"><h3>任务文件</h3><span style="color:#929bab"><?= count($files) + ($hasCostingSheet ? 1 : 0) ?> 份</span></div>
+        <div class="card-head"><div><h3>任务文件</h3><small class="section-hint">订单原件、业务附件与 DN 文件</small></div><span style="color:#929bab"><?= count($files) + count($supplementFiles) + count($dnTasks) + count(array_filter($dnTasks, static function ($dn) { return !empty($dn['done_file_name']); })) + ($hasCostingSheet ? 1 : 0) ?> 份</span></div>
         <div class="card-body">
+            <div class="file-section-title">订单与业务文件</div>
             <?php foreach ($files as $file): ?>
                 <div class="file-download">
                     <span class="file-type"><?= h(strtoupper(substr($file['attachment_extension'], 0, 4))) ?></span>
@@ -76,6 +81,35 @@ require __DIR__ . '/includes/layout_top.php';
             <?php endif; ?>
             <?php foreach ($supplementFiles as $supplement): ?>
                 <div class="file-download"><span class="file-type">附件</span><span class="file-meta"><b><?= h($supplement['original_name']) ?></b><small>补充附件 · 审批第 <?= (int)$supplement['approval_round'] ?> 轮</small></span><a class="btn btn-secondary btn-sm" href="<?= h(app_url('download.php?id=' . $taskId . '&type=supplement&file_id=' . (int)$supplement['id'])) ?>">下载</a></div>
+            <?php endforeach; ?>
+
+            <div class="dn-section-head">
+                <div><div class="file-section-title">DN 文件</div><small>原始上传件与识别生成件分别标记，便于核对</small></div>
+                <?php if ($canUploadDn): ?>
+                    <form class="dn-upload-form" method="post" action="<?= h(app_url('upload_dn.php')) ?>" enctype="multipart/form-data">
+                        <input type="hidden" name="csrf_token" value="<?= h(csrf_token()) ?>">
+                        <input type="hidden" name="task_id" value="<?= (int)$taskId ?>">
+                        <label class="btn btn-primary btn-sm">＋ 上传 DN<input type="file" name="dn_file" accept="application/pdf,.pdf" required onchange="this.form.submit()"></label>
+                    </form>
+                <?php else: ?>
+                    <button class="btn btn-secondary btn-sm" disabled title="订单识别完成后才可上传">上传 DN</button>
+                <?php endif; ?>
+            </div>
+            <?php if (!$dnTasks): ?><div class="dn-empty">暂无 DN 文件<?= $canUploadDn ? '，可上传 PDF 发起识别' : '，订单识别完成后可上传' ?></div><?php endif; ?>
+            <?php foreach ($dnTasks as $dn): ?>
+                <div class="file-download dn-file original">
+                    <span class="file-type">PDF</span>
+                    <span class="file-meta"><b><?= h($dn['upload_file_name']) ?></b><small><span class="file-kind original">原始上传 DN</span> · <?= h($dn['original_file_name']) ?> · <?= h($dn['uploaded_at']) ?></small></span>
+                    <span class="status-badge <?= (int)$dn['status'] === 3 ? 'completed' : ((int)$dn['status'] === 2 ? 'recognizing' : 'pending') ?>"><?= h([1=>'待识别',2=>'识别中',3=>'已完成'][(int)$dn['status']] ?? '未知') ?></span>
+                    <a class="btn btn-secondary btn-sm" href="<?= h(app_url('download.php?id='.$taskId.'&type=dn&file_id='.(int)$dn['id'])) ?>">下载</a>
+                </div>
+                <?php if (!empty($dn['done_file_name'])): ?>
+                    <div class="file-download dn-file generated">
+                        <span class="file-type">PDF</span>
+                        <span class="file-meta"><b><?= h($dn['done_file_name']) ?></b><small><span class="file-kind generated">识别生成 DN</span> · 完成于 <?= h($dn['recognition_finished_at']) ?></small></span>
+                        <a class="btn btn-primary btn-sm" href="<?= h(app_url('download.php?id='.$taskId.'&type=dn_done&file_id='.(int)$dn['id'])) ?>">下载</a>
+                    </div>
+                <?php endif; ?>
             <?php endforeach; ?>
         </div>
     </section>

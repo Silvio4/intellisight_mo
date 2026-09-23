@@ -60,6 +60,7 @@ Costing Sheet 生成成功后不再直接视为业务完成，而是进入人工
 3. 选择“同意”时，系统原子地把 `待审批` 改为 `建单中`，锁定该订单，防止多人重复审批或重复建单。
 4. ePortal 明确建单成功后显示 `已完成`；调用失败或结果不明确时显示 `待重试`。
 5. `待重试` 由审批用户或管理员核对 ePortal 是否已经产生订单。确认未建单后才能点击“重试建单”，状态变回 `建单中`。
+   `待重试` 任务的通用详情页也会展示最后一次 ePortal 错误，并向审批用户和管理员提供“提交eportal”按钮；该按钮仍统一调用 `api/submit_eportal.php`。
 6. 选择“退回”时必须填写理由，任务变为 `已退回`；提交用户完成修改并重新提交后，该任务再次出现在 `待审批` 队列。
 
 审批用户的处理路径：
@@ -175,9 +176,11 @@ uploaded_by, created_at
 ### 地址与传输方式
 
 - 地址：`POST http://10.106.4.174/mo.php/api/createTicket`
-- 建议配置项：`EPORTAL_ENDPOINT`、`EPORTAL_TIMEOUT_SECONDS`，禁止把地址散落在业务代码中。
+- 建议配置项：`EPORTAL_ENDPOINT`、`EPORTAL_CONNECT_TIMEOUT_SECONDS`、`EPORTAL_TIMEOUT_SECONDS`，禁止把地址散落在业务代码中。默认连接超时为 30 秒，整个请求超时为 60 秒；整个请求超时配置小于连接超时时，程序会自动采用连接超时值。
 - 请求使用 `multipart/form-data`：表单字段 `data` 是下表对象序列化后的 JSON 字符串，文件字段 `att2` 是本审批轮次生成的 XLSX；补充附件使用 `files[0]`、`files[1]` 依次上传。
 - JSON 中仍保留 `att2: null` 与 `files: []`，实际二进制文件通过同名 multipart 文件字段传送。
+- 所有审批及重试建单统一 POST 到 `api/submit_eportal.php`，由该接口独占处理状态变更、ePortal 请求和结果入库。
+- 每次发送前，API 日志会以 `【请求eportal原格式】` 记录完整 ePortal JSON 字段层级，并另行记录 multipart 文件元数据、请求头和超时设置；收到的 HTTP 状态与原始响应体以 `【eportal响应】` 记录。文件二进制内容不写入日志，以免日志无限膨胀。
 
 ### 顶层字段映射
 

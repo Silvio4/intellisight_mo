@@ -33,7 +33,9 @@ return [
     ],
     'eportal' => [
         'endpoint' => getenv('EPORTAL_ENDPOINT') ?: 'http://10.106.4.174/mo.php/api/createTicket',
-        'timeout_seconds' => (int)(getenv('EPORTAL_TIMEOUT_SECONDS') ?: 30),
+        // 建立内网连接有时会超过 10 秒，连接与整个请求的超时均可独立调整。
+        'connect_timeout_seconds' => (int)(getenv('EPORTAL_CONNECT_TIMEOUT_SECONDS') ?: 30),
+        'timeout_seconds' => (int)(getenv('EPORTAL_TIMEOUT_SECONDS') ?: 60),
         'node_id' => 'JOSM',
         'biz_category' => 'Product',
         'gst_rate' => 7,

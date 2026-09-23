@@ -74,22 +74,78 @@ function submit_task_to_eportal(int $taskId): array
     $json = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     if ($json === false) throw new RuntimeException('ePortal 数据编码失败。');
 
-    $post = ['data'=>$json, 'att2'=>new CURLFile($sheet, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', basename($sheet))];
+    $sheetMime = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+    $post = ['data'=>$json, 'att2'=>new CURLFile($sheet, $sheetMime, basename($sheet))];
+    // cURL 会在发送时把 CURLFile 转成二进制 multipart 段。日志保留完整 data
+    // 参数以及每个文件段的名称、类型、大小和来源，避免把二进制文件写入日志。
+    $requestBodyLog = [
+        'data'=>$json,
+        'att2'=>[
+            'name'=>basename($sheet),
+            'type'=>$sheetMime,
+            'size'=>filesize($sheet),
+            'path'=>$sheet,
+        ],
+    ];
     $files = $pdo->prepare('SELECT * FROM contract_form_files WHERE task_id=:id ORDER BY id');
     $files->execute([':id'=>$taskId]);
     foreach ($files->fetchAll() as $index => $file) {
         $path = dirname(__DIR__) . '/files/contract_forms/' . $taskId . '/supplements/' . basename((string)$file['stored_name']);
-        if (is_file($path)) $post['files[' . $index . ']'] = new CURLFile($path, (string)$file['mime_type'], (string)$file['original_name']);
+        if (is_file($path)) {
+            $field = 'files[' . $index . ']';
+            $post[$field] = new CURLFile($path, (string)$file['mime_type'], (string)$file['original_name']);
+            $requestBodyLog[$field] = [
+                'name'=>(string)$file['original_name'],
+                'type'=>(string)$file['mime_type'],
+                'size'=>filesize($path),
+                'path'=>$path,
+            ];
+        }
     }
-    $curl = curl_init((string)config_value('eportal.endpoint'));
+    $endpoint = (string)config_value('eportal.endpoint');
+    $connectTimeout = max(1, (int)config_value('eportal.connect_timeout_seconds', 30));
+    $timeout = max($connectTimeout, (int)config_value('eportal.timeout_seconds', 60));
+    $headers = ['Accept: application/json','X-Idempotency-Key: '.(string)$task['eportal_request_key']];
+    // 保持 data 的原始字段层级，便于从日志直接复制 JSON 与 ePortal 联调。
+    write_app_log('eportal', '【请求eportal原格式】', $payload);
+    write_app_log('eportal', '【请求eportal multipart】', [
+        'task_id'=>$taskId, 'method'=>'POST', 'url'=>$endpoint,
+        'content_type'=>'multipart/form-data', 'headers'=>$headers,
+        'connect_timeout_seconds'=>$connectTimeout, 'timeout_seconds'=>$timeout,
+        'request_body'=>$requestBodyLog,
+    ]);
+
+    $curl = curl_init($endpoint);
     curl_setopt_array($curl, [CURLOPT_POST=>true, CURLOPT_POSTFIELDS=>$post, CURLOPT_RETURNTRANSFER=>true,
-        CURLOPT_CONNECTTIMEOUT=>10, CURLOPT_TIMEOUT=>max(1,(int)config_value('eportal.timeout_seconds',30)),
-        CURLOPT_HTTPHEADER=>['Accept: application/json','X-Idempotency-Key: '.(string)$task['eportal_request_key']]]);
+        CURLOPT_CONNECTTIMEOUT=>$connectTimeout, CURLOPT_TIMEOUT=>$timeout,
+        CURLOPT_HTTPHEADER=>$headers]);
     $body = curl_exec($curl);
     $error = curl_error($curl);
+    $errorNo = curl_errno($curl);
     $http = (int)curl_getinfo($curl, CURLINFO_HTTP_CODE);
+    $connectTime = (float)curl_getinfo($curl, CURLINFO_CONNECT_TIME);
+    $totalTime = (float)curl_getinfo($curl, CURLINFO_TOTAL_TIME);
+    $primaryIp = (string)curl_getinfo($curl, CURLINFO_PRIMARY_IP);
     curl_close($curl);
-    if ($body === false || $error !== '') throw new RuntimeException('ePortal 请求失败：' . ($error ?: '无响应'));
+    // 无论成功、HTTP 错误或连接失败都固定输出该日志，保证一次请求有完整闭环。
+    write_app_log('eportal', '【eportal响应】', [
+        'task_id'=>$taskId, 'http_status'=>$http, 'primary_ip'=>$primaryIp,
+        'connect_time_seconds'=>$connectTime, 'total_time_seconds'=>$totalTime,
+        'curl_errno'=>$errorNo, 'curl_error'=>$error,
+        'response_body'=>$body === false ? null : (string)$body,
+    ]);
+    if ($body === false || $error !== '') {
+        write_app_log('eportal', '【eportal请求失败】', [
+            'task_id'=>$taskId, 'url'=>$endpoint, 'curl_errno'=>$errorNo,
+            'curl_error'=>$error ?: '无响应', 'http_status'=>$http,
+            'primary_ip'=>$primaryIp, 'connect_time_seconds'=>$connectTime,
+            'total_time_seconds'=>$totalTime,
+        ]);
+        throw new RuntimeException(sprintf(
+            'ePortal 请求失败：%s（地址：%s，cURL errno：%d，连接耗时：%.3f 秒，总耗时：%.3f 秒）',
+            $error ?: '无响应', $endpoint, $errorNo, $connectTime, $totalTime
+        ));
+    }
     $response = json_decode((string)$body, true);
     if ($http < 200 || $http >= 300 || !is_array($response) || ($response['success'] ?? false) !== true) {
         $message = is_array($response) ? (string)($response['message'] ?? '未确认建单成功') : '响应不是有效 JSON';

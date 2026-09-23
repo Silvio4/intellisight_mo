@@ -61,6 +61,7 @@ require __DIR__ . '/includes/layout_top.php';
             <div class="info-grid">
                 <div class="info-item"><label>任务号</label><div><b><?= h(format_task_no($task['id'])) ?></b></div></div>
                 <div class="info-item"><label>Sales Person</label><div><?= h($task['sales_person'] ?: '—') ?></div></div>
+                <div class="info-item"><label>Customer ID</label><div><?= h($task['customer_id'] ?: '—') ?></div></div>
                 <div class="info-item"><label>创建人</label><div><?= h($task['created_by_name']) ?></div></div>
                 <div class="info-item"><label>创建时间</label><div><?= h($task['created_at']) ?></div></div>
                 <div class="info-item"><label>开始识别时间</label><div><?= h($task['recognition_started_at'] ?: '—') ?></div></div>

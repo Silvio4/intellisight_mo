@@ -42,7 +42,7 @@ function eportal_payload(array $task): array
     $gp = $totalPrice - $totalCost;
     return [
         'products'=>$products, 'presales'=>'0', 'quotation_ref'=>(string)$task['po_no'],
-        'customer_name'=>(string)$task['customer_name'], 'customer_id'=>'',
+        'customer_name'=>(string)$task['customer_name'], 'customer_id'=>(string)$task['customer_id'],
         'user_name'=>(string)$task['end_user_name'], 'so'=>(string)$task['po_no'], 'so1'=>'',
         'customer_payment_term'=>'', 'sales_person'=>(string)$task['sales_person'],
         'customer_address'=>(string)$task['customer_delivery_address'],

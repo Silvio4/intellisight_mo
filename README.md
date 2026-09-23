@@ -47,7 +47,7 @@ PHP + MySQL 5.7 合同识别系统，部署路径默认为 `/intellisight_mo`。
 - `POST /api/p_sys_back.php`：接收 P 系统以 `data` 包裹的原任务字段、`pid` 和 `p_sys_link`；保存匹配结果后会立即生成 Costing Sheet，成功时任务更新为 `6`（待审批）。
 - `POST /api/costing_sheet.php`：接收 `task_id`，可对状态 `5` 的任务重试生成 Costing Sheet。生成前需将模板放在 `template/costing_sheet_v1.xlsx`，输出保存于 `files/costing_sheet/costing_sheet_Txxxxxx.xlsx`，并会显示在任务详情的“任务文件”中。
 
-已有数据库应先执行 `database_migration_p_system.sql`（如尚未执行），再执行 `database_migration_approval_eportal.sql`；全新安装直接使用 `database.sql`。
+已有数据库应先执行 `database_migration_p_system.sql`（如尚未执行），再执行 `database_migration_approval_eportal.sql` 和 `database_migration_customer_id.sql`；全新安装直接使用 `database.sql`。
 
 ### DN 识别
 

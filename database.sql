@@ -42,6 +42,7 @@ CREATE TABLE `contract_forms` (
   `attachment_file_size` BIGINT UNSIGNED NOT NULL DEFAULT 0,
   `attachment_sha256` CHAR(64) NOT NULL DEFAULT '',
   `po_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'PO编号',
+  `customer_id` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '客户ID',
   `customer_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '客户名称',
   `customer_delivery_address` TEXT NULL COMMENT '客户送货地址',
   `end_user_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '最终用户名称',

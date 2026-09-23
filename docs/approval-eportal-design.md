@@ -181,6 +181,7 @@ uploaded_by, created_at
 - JSON 中仍保留 `att2: null` 与 `files: []`，实际二进制文件通过同名 multipart 文件字段传送。
 - 所有审批及重试建单统一 POST 到 `api/submit_eportal.php`，由该接口独占处理状态变更、ePortal 请求和结果入库。
 - 每次发送前，API 日志会以 `【请求eportal原格式】` 记录完整 ePortal JSON 字段层级，并另行记录 multipart 文件元数据、请求头和超时设置；收到的 HTTP 状态与原始响应体以 `【eportal响应】` 记录。文件二进制内容不写入日志，以免日志无限膨胀。
+- ePortal 返回 ThinkPHP HTML 错误页时，客户端会提取其 `h1` 中的核心错误保存到 `eportal_last_error`；例如 `Column 'applicant_id' cannot be null` 表示 ePortal 服务端在入库时没有解析出申请人，不是本系统到 ePortal 的网络连接失败。现按任务 `created_by` 关联 `users`，并以该用户的 `id`、`username` 和 `email` 填充申请人字段。
 
 ### 顶层字段映射
 
@@ -225,8 +226,15 @@ uploaded_by, created_at
 | `total_price_inclusive_sst` | `total_price_exclude_sst + sst_payable` | 数值。 |
 | `gst_payable_rate` | `eportal.gst_rate` | 默认数值 `7`，可在配置中调整。 |
 | `total_amount` | 含税总额 | `total_price + sst_payable`。 |
-| `buyer_mail` | `null` | 当前数据表无来源。 |
-| `buyer` | `null` | 当前数据表无来源。 |
+| `buyer_mail` | 任务创建人 `users.buyer_mail` | 必填；当前默认为 `yu.y.zhang@jos.com`。 |
+| `buyer` | 任务创建人 `users.buyer` | 必填；当前默认为 `Yu y Zhang`。 |
+| `buyer_boss` | 任务创建人 `users.buyer_boss` | 必填；当前默认为 `Candice Wu`。 |
+| `buyer_boss_mail` | 任务创建人 `users.buyer_boss_mail` | 必填；当前默认为 `candice.wu@jos.com`。 |
+| `applicant_id` | `contract_forms.created_by` 对应的 `users.id` | 以字符串提交。 |
+| `applicant` | 任务创建人 `users.username` | 必填。 |
+| `applicant_mail` | 任务创建人 `users.email` | 必填。 |
+| `ratifier` | 任务创建人 `users.ratifier` | 必填；当前默认为 `Joan Liu`。 |
+| `ratifier_mail` | 任务创建人 `users.ratifier_mail` | 必填；当前默认为 `joan.liu@jos.com`。 |
 
 ### `products[]` 字段映射
 

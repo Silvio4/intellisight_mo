@@ -5,7 +5,7 @@
 1. 用户在订单识别完成后，于任务详情页上传 DN PDF；系统创建“待识别”任务。
 2. 识别系统调用 `get_task_dn.php` 领取任务；领取成功后任务变为“识别中”。
 3. 识别系统通过响应中的下载地址获取原始 DN PDF。
-4. 识别完成后，调用 `returndata_dn.php` 上传重新生成的 DN PDF；任务变为“已完成”。
+4. 识别完成后，调用 `returndata_dn.php` 回传结果；可选上传重新生成的 DN PDF，任务变为“已完成”。
 
 接口 JSON 响应均使用 UTF-8 编码。下面示例假设系统部署地址为：
 
@@ -115,21 +115,23 @@ curl -L \
 
 成功时响应正文为 PDF 二进制内容，响应头 `Content-Type` 为 `application/pdf`。文件或任务不存在时返回 HTTP `404` 和 JSON 错误信息。
 
-## 4. 返回重新生成的 DN PDF
+## 4. 返回 DN 处理结果
 
 ```http
 POST /intellisight_mo/api/returndata_dn.php
-Content-Type: multipart/form-data
+Content-Type: application/json 或 multipart/form-data
 ```
 
-此接口必须使用 `multipart/form-data` 上传文件，不接受 JSON 或 Base64 文件内容。
+过渡期间，接口允许只返回任务 ID 而不上传文件，也允许 `dn_file` 是普通文本等其他内容。没有收到有效 PDF 时，任务仍会完成，但不会生成可下载的完成文件。
+
+如需保存生成后的 PDF，应使用 `multipart/form-data`，并把 `dn_file` 作为文件 part 上传。仅回传任务状态时，也可以使用 JSON；JSON 顶层或 `data` 对象内的 `dn_task_id` 均可识别。
 
 ### 4.1 请求字段
 
 | 字段 | 类型 | 必填 | 说明 |
 |---|---|:---:|---|
 | `dn_task_id` | integer | 是 | `get_task_dn.php` 返回的 DN 任务 ID |
-| `dn_file` | file | 是 | 重新生成的 DN PDF，最大 30MB |
+| `dn_file` | file / 任意 | 否 | 有效 PDF（最大 30MB）会被保存；缺失或其他内容会被忽略 |
 
 为了兼容旧调用方，接口也接受 `task_id` 作为 `dn_task_id` 的别名，并接受 `file` 作为 `dn_file` 的别名；新对接应优先使用标准字段名 `dn_task_id` 和 `dn_file`。
 
@@ -142,6 +144,31 @@ curl -X POST \
   "https://example.com/intellisight_mo/api/returndata_dn.php"
 ```
 
+Python `requests` 示例：
+
+```python
+with open("/path/to/generated-dn.pdf", "rb") as pdf:
+    response = requests.post(
+        "https://example.com/intellisight_mo/api/returndata_dn.php",
+        data={"dn_task_id": 12},
+        files={"dn_file": ("generated-dn.pdf", pdf, "application/pdf")},
+    )
+response.raise_for_status()
+```
+
+上传文件时不要自行设置 `Content-Type` 请求头；由 HTTP 客户端生成包含 boundary 的 `multipart/form-data` 请求头。
+
+不返回文件时可以直接发送 JSON：
+
+```json
+{
+  "data": {
+    "dn_task_id": 12
+  },
+  "state": 0
+}
+```
+
 ### 4.3 成功响应
 
 ```json
@@ -152,9 +179,12 @@ curl -X POST \
   "order_task_id": 26,
   "status": 3,
   "status_text": "已完成",
+  "file_saved": true,
   "done_file_name": "dn_T000026_20260922_1_done.pdf"
 }
 ```
+
+未上传有效 PDF 时，`file_saved` 为 `false`、`done_file_name` 为 `null`，任务状态仍为 `3`（已完成）。
 
 返回成功后，生成文件保存在系统的 `files/dn_done/` 目录，并可在订单任务详情页的“DN 文件”区域下载。
 
@@ -166,7 +196,7 @@ curl -X POST \
 | `404` | DN 任务或待下载文件不存在 |
 | `405` | 使用了接口不支持的 HTTP 方法 |
 | `409` | 尝试向非“识别中”状态的任务回传文件 |
-| `422` | 缺少任务 ID、缺少文件、文件超过 30MB，或文件不是有效 PDF |
+| `422` | 缺少或无法识别任务 ID |
 | `500` | 服务端领取或文件存储处理失败 |
 
 错误响应格式示例：
@@ -179,6 +209,14 @@ curl -X POST \
 ```
 
 调用方应同时检查 HTTP 状态码和响应中的 `success` 字段。回传接口成功前不要删除本地生成文件；发生网络错误或 `5xx` 错误时，可先查询运维日志并谨慎重试。同一个已完成任务不能重复回传，重复请求会返回 HTTP `409`。
+
+### 5.1 过渡期文件处理规则
+
+1. 不传 `dn_file`：完成任务，不保存文件；
+2. `dn_file` 为 `test` 等普通字段：忽略该字段，完成任务，不保存文件；
+3. `dn_file` 为无效、超限或非 PDF 上传文件：忽略该文件，完成任务，不保存文件；
+4. `dn_file` 为 30MB 以内的有效 PDF：保存文件并完成任务；
+5. DN 结果应提交到 `returndata_dn.php`，不要提交到订单识别结果接口 `returndata.php`。
 
 ## 6. 文件命名及存储规则
 
@@ -200,4 +238,3 @@ api/logs/returndata_dn_YYYY-MM-DD.log
 ```
 
 响应头会包含 `X-Request-ID`。排查问题时建议同时提供调用时间、接口地址、HTTP 状态码、`dn_task_id` 和 `X-Request-ID`，以便在对应接口日志中定位请求。
-

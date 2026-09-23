@@ -179,6 +179,7 @@ function generate_costing_sheet(int $taskId): array
 
             $fixedCells = [
                 'D2' => $task['sales_person'], 'D4' => $task['po_no'], 'D5' => $task['customer_name'],
+                'D6' => $task['customer_id'],
                 'D8' => date('Y/n/j'), 'K2' => $task['customer_delivery_address'],
                 'K3' => $task['end_user_name'], 'K4' => $task['end_user_contact'],
                 'K5' => $task['end_user_email'],

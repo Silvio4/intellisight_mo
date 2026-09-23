@@ -192,7 +192,7 @@ uploaded_by, created_at
 | `presales` | 固定值 `"0"` | 当前接口实现直接传字符串 `0`。 |
 | `quotation_ref` | `contract_forms.po_no` | 暂按 PO No. 映射；需业务确认是否另有报价单号。 |
 | `customer_name` | `contract_forms.customer_name` | 直接传。 |
-| `customer_id` | 空字符串 | 当前数据表无客户 ID；接口实现传空字符串。 |
+| `customer_id` | `contract_forms.customer_id` | 使用新建表单时录入的 Customer ID。 |
 | `user_name` | `contract_forms.end_user_name` | 直接传。 |
 | `so` | `contract_forms.po_no` | 暂按 PO No. 映射；如 SO 与 PO 不同，应新增 `so`。 |
 | `so1` | 空字符串 | 当前接口实现传空字符串。 |

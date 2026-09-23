@@ -1,7 +1,36 @@
 <?php
 
+function eportal_response_error_message(string $body, int $httpStatus): string
+{
+    $response = json_decode($body, true);
+    if (is_array($response)) {
+        $message = trim((string)($response['message'] ?? $response['error'] ?? ''));
+        return $message !== '' ? $message : '未确认建单成功';
+    }
+
+    // ThinkPHP 错误页会把真实的数据库错误放在 h1 中。提取该内容，
+    // 避免把可操作的服务端报错统一隐藏成“响应不是有效 JSON”。
+    if (preg_match('/<h1\b[^>]*>(.*?)<\/h1>/is', $body, $matches) === 1) {
+        $message = trim(html_entity_decode(strip_tags($matches[1]), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+        if ($message !== '') {
+            return $message;
+        }
+    }
+
+    $status = $httpStatus > 0 ? 'HTTP ' . $httpStatus . '，' : '';
+    return $status . '响应不是有效 JSON';
+}
+
 function eportal_payload(array $task): array
 {
+    $userFields = ['applicant_id', 'applicant', 'applicant_mail', 'buyer_mail', 'buyer',
+        'buyer_boss', 'buyer_boss_mail', 'ratifier', 'ratifier_mail'];
+    foreach ($userFields as $field) {
+        if (trim((string)($task[$field] ?? '')) === '') {
+            throw new RuntimeException('任务创建人缺少 ePortal 必填资料：' . $field . '。');
+        }
+    }
+
     $columns = [];
     foreach (['pid','description','vendor_part_no','qty','price_currency','unit_price'] as $field) {
         $columns[$field] = split_result_values((string)($task[$field] ?? ''));
@@ -56,7 +85,12 @@ function eportal_payload(array $task): array
         'grand_total_GP_rate'=>$totalPrice == 0.0 ? '0.0%' : number_format($gp/$totalPrice*100, 1, '.', '').'%',
         'total_price_exclude_sst'=>$totalPrice, 'sst_payable'=>$gstPayable,
         'total_price_inclusive_sst'=>$totalPrice+$gstPayable, 'gst_payable_rate'=>$gstRate,
-        'total_amount'=>$totalPrice+$gstPayable, 'buyer_mail'=>null, 'buyer'=>null,
+        'total_amount'=>$totalPrice+$gstPayable,
+        'buyer_mail'=>(string)$task['buyer_mail'], 'buyer'=>(string)$task['buyer'],
+        'buyer_boss'=>(string)$task['buyer_boss'], 'buyer_boss_mail'=>(string)$task['buyer_boss_mail'],
+        'applicant_id'=>(string)$task['applicant_id'], 'applicant'=>(string)$task['applicant'],
+        'applicant_mail'=>(string)$task['applicant_mail'], 'ratifier'=>(string)$task['ratifier'],
+        'ratifier_mail'=>(string)$task['ratifier_mail'],
     ];
 }
 
@@ -64,7 +98,7 @@ function submit_task_to_eportal(int $taskId): array
 {
     if (!function_exists('curl_init')) throw new RuntimeException('服务器未安装 cURL 扩展。');
     $pdo = db();
-    $stmt = $pdo->prepare('SELECT * FROM contract_forms WHERE id=:id LIMIT 1');
+    $stmt = $pdo->prepare('SELECT cf.*, u.id AS applicant_id, u.username AS applicant, u.email AS applicant_mail, u.buyer_mail, u.buyer, u.buyer_boss, u.buyer_boss_mail, u.ratifier, u.ratifier_mail FROM contract_forms cf INNER JOIN users u ON u.id=cf.created_by WHERE cf.id=:id LIMIT 1');
     $stmt->execute([':id'=>$taskId]);
     $task = $stmt->fetch();
     if (!$task || (int)$task['status'] !== 8) throw new RuntimeException('任务不是建单中状态。');
@@ -148,7 +182,7 @@ function submit_task_to_eportal(int $taskId): array
     }
     $response = json_decode((string)$body, true);
     if ($http < 200 || $http >= 300 || !is_array($response) || ($response['success'] ?? false) !== true) {
-        $message = is_array($response) ? (string)($response['message'] ?? '未确认建单成功') : '响应不是有效 JSON';
+        $message = eportal_response_error_message((string)$body, $http);
         throw new RuntimeException('ePortal 建单失败：' . $message);
     }
     return ['response'=>$response, 'raw'=>(string)$body, 'ticket_no'=>(string)($response['ticket_no'] ?? $response['id'] ?? '')];

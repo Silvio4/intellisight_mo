@@ -21,6 +21,37 @@ function eportal_response_error_message(string $body, int $httpStatus): string
     return $status . '响应不是有效 JSON';
 }
 
+function eportal_response_is_success(array $response, int $httpStatus): bool
+{
+    if ($httpStatus < 200 || $httpStatus >= 300) {
+        return false;
+    }
+
+    if (($response['success'] ?? false) === true) {
+        return true;
+    }
+
+    return ($response['state'] ?? null) === 1 || ($response['state'] ?? null) === '1';
+}
+
+function eportal_response_ticket_no(array $response): string
+{
+    if (array_key_exists('ticket_no', $response)) {
+        return trim((string)$response['ticket_no']);
+    }
+    if (array_key_exists('id', $response)) {
+        return trim((string)$response['id']);
+    }
+
+    // MO ePortal 以 {"state":1,"msg":"19"} 返回成功结果，msg 为 ePortal 单号。
+    if ((($response['state'] ?? null) === 1 || ($response['state'] ?? null) === '1')
+        && preg_match('/^\d+$/', trim((string)($response['msg'] ?? ''))) === 1) {
+        return trim((string)$response['msg']);
+    }
+
+    return '';
+}
+
 function eportal_payload(array $task): array
 {
     $userFields = ['applicant_id', 'applicant', 'applicant_mail', 'buyer_mail', 'buyer',
@@ -181,9 +212,9 @@ function submit_task_to_eportal(int $taskId): array
         ));
     }
     $response = json_decode((string)$body, true);
-    if ($http < 200 || $http >= 300 || !is_array($response) || ($response['success'] ?? false) !== true) {
+    if (!is_array($response) || !eportal_response_is_success($response, $http)) {
         $message = eportal_response_error_message((string)$body, $http);
         throw new RuntimeException('ePortal 建单失败：' . $message);
     }
-    return ['response'=>$response, 'raw'=>(string)$body, 'ticket_no'=>(string)($response['ticket_no'] ?? $response['id'] ?? '')];
+    return ['response'=>$response, 'raw'=>(string)$body, 'ticket_no'=>eportal_response_ticket_no($response)];
 }

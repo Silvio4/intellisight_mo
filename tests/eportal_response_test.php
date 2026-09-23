@@ -20,6 +20,14 @@ function assert_same(string $expected, string $actual, string $case): void
     }
 }
 
+function assert_true(bool $actual, string $case): void
+{
+    if (!$actual) {
+        fwrite(STDERR, $case . " failed\n");
+        exit(1);
+    }
+}
+
 assert_same(
     "SQLSTATE[23000]: Integrity constraint violation: 1048 Column 'applicant_id' cannot be null",
     eportal_response_error_message(
@@ -38,6 +46,14 @@ assert_same(
     eportal_response_error_message('Bad Gateway', 502),
     'plain HTTP error'
 );
+assert_true(eportal_response_is_success(['state'=>1, 'msg'=>'19'], 200), 'state integer success');
+assert_true(eportal_response_is_success(['state'=>'1', 'msg'=>'20'], 200), 'state string success');
+assert_true(eportal_response_is_success(['success'=>true, 'ticket_no'=>'EP-21'], 200), 'legacy success');
+assert_true(!eportal_response_is_success(['state'=>0, 'msg'=>'失败'], 200), 'state failure');
+assert_true(!eportal_response_is_success(['state'=>1, 'msg'=>'19'], 500), 'HTTP failure');
+assert_same('19', eportal_response_ticket_no(['state'=>1, 'msg'=>'19']), 'state msg ticket number');
+assert_same('EP-21', eportal_response_ticket_no(['success'=>true, 'ticket_no'=>'EP-21']), 'ticket_no field');
+assert_same('', eportal_response_ticket_no(['state'=>1, 'msg'=>'建单成功']), 'non-numeric state msg');
 
 $payload = eportal_payload([
     'pid'=>'PC2310270015', 'description'=>'Battery', 'vendor_part_no'=>'HFG3030010',

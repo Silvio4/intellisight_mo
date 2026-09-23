@@ -40,7 +40,18 @@ require __DIR__ . '/includes/layout_top.php';
 ?>
 <div class="page-head">
     <div><h2><?= h(format_task_no($task['id'])) ?></h2><p>合同任务详情与识别结果</p></div>
-    <div><?php if ((int)$task['status'] === 7 && ((int)$task['created_by'] === (int)$_SESSION['user_id'] || current_user_role() === 'admin')): ?><a class="btn btn-danger" href="<?= h(app_url('contract_form_edit.php?id=' . $taskId)) ?>">修改并重新提交</a><?php endif; ?> <a class="btn btn-secondary" href="<?= h(app_url('contract_forms.php')) ?>">← 返回列表</a></div>
+    <div>
+        <?php if ((int)$task['status'] === 7 && ((int)$task['created_by'] === (int)$_SESSION['user_id'] || current_user_role() === 'admin')): ?><a class="btn btn-danger" href="<?= h(app_url('contract_form_edit.php?id=' . $taskId)) ?>">修改并重新提交</a><?php endif; ?>
+        <?php if ((int)$task['status'] === 10 && can_approve_orders()): ?>
+            <form method="post" action="<?= h(app_url('api/submit_eportal.php')) ?>" style="display:inline" onsubmit="return confirm('请先确认 ePortal 未产生重复订单。确定重新提交？')">
+                <input type="hidden" name="csrf_token" value="<?= h(csrf_token()) ?>">
+                <input type="hidden" name="task_id" value="<?= (int)$taskId ?>">
+                <input type="hidden" name="action" value="retry">
+                <button class="btn btn-primary" type="submit">提交eportal</button>
+            </form>
+        <?php endif; ?>
+        <a class="btn btn-secondary" href="<?= h(app_url('contract_forms.php')) ?>">← 返回列表</a>
+    </div>
 </div>
 
 <div class="detail-grid">
@@ -55,6 +66,7 @@ require __DIR__ . '/includes/layout_top.php';
                 <div class="info-item"><label>开始识别时间</label><div><?= h($task['recognition_started_at'] ?: '—') ?></div></div>
                 <div class="info-item"><label>完成时间</label><div><?= h($task['completed_at'] ?: '—') ?></div></div>
                 <?php if (!empty($task['rejection_reason'])): ?><div class="info-item full"><label>退回理由</label><div class="danger-text"><?= h($task['rejection_reason']) ?></div></div><?php endif; ?>
+                <?php if (!empty($task['eportal_last_error'])): ?><div class="info-item full"><label>ePortal 建单错误</label><div class="danger-text"><?= h($task['eportal_last_error']) ?></div></div><?php endif; ?>
                 <?php if (!empty($task['error_message'])): ?><div class="info-item full"><label>错误信息</label><div style="color:#c43f50"><?= h($task['error_message']) ?></div></div><?php endif; ?>
             </div>
         </div>

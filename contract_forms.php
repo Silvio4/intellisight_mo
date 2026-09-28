@@ -1,7 +1,7 @@
 <?php
 require __DIR__ . '/includes/auth.php';
 
-$pageTitle = '合同表单';
+$pageTitle = '订单资料';
 $pdo = db();
 $summaryWhere = current_user_role() === 'submitter' ? ' WHERE created_by=' . (int)$_SESSION['user_id'] : '';
 $s = $pdo->query('SELECT COUNT(*) total, SUM(status=2) pending, SUM(status IN (3,4,5,6,8)) processing, SUM(status=9) completed FROM contract_forms' . $summaryWhere)->fetch();
@@ -15,7 +15,7 @@ $summary = [
 $taskId = trim((string)($_GET['id'] ?? ''));
 $creator = trim((string)($_GET['creator'] ?? ''));
 $status = (int)($_GET['status'] ?? 0);
-if ($status < 1 || $status > 10) $status = 0;
+if ($status < 1 || $status > 11) $status = 0;
 
 $where = [];
 $params = [];
@@ -69,8 +69,11 @@ function filter_reset_url(string $field): string
 require __DIR__ . '/includes/layout_top.php';
 ?>
 <div class="page-head">
-    <div><h2>合同表单</h2><p>创建并跟踪澳门合同资料识别任务</p></div>
-    <a class="btn btn-primary" href="<?= h(app_url('contract_form_create.php')) ?>"><span>＋</span> 新建表单</a>
+    <div><h2>订单资料</h2><p>创建并跟踪澳门订单资料任务</p></div>
+    <div class="page-head-actions">
+        <a class="btn btn-primary" href="<?= h(app_url('contract_form_create.php')) ?>"><span>＋</span> 有正式客户PO</a>
+        <a class="btn btn-secondary" href="<?= h(app_url('contract_form_create.php?po=none')) ?>"><span>＋</span> 无正式客户PO</a>
+    </div>
 </div>
 <div class="summary-grid">
     <div class="card summary-card"><span class="summary-icon all">▦</span><div><b><?= $summary['total'] ?></b><span>全部任务</span></div></div>
@@ -81,7 +84,7 @@ require __DIR__ . '/includes/layout_top.php';
 <div class="card">
     <div class="card-head"><h3>任务列表</h3><span style="color:#8b95a6">共 <?= $totalRows ?> 条</span></div>
     <?php if (!$tasks): ?>
-        <div class="empty-state"><div class="empty-icon">▤</div><strong>暂时没有合同任务</strong></div>
+        <div class="empty-state"><div class="empty-icon">▤</div><strong>暂时没有订单资料任务</strong></div>
     <?php else: ?>
         <div class="table-wrap filter-table-wrap">
             <table class="data-table">
@@ -121,7 +124,7 @@ require __DIR__ . '/includes/layout_top.php';
                                 <label for="filter-status">任务状态</label>
                                 <select class="form-control" id="filter-status" name="status">
                                     <option value="">全部状态</option>
-                                    <?php for ($i = 1; $i <= 10; $i++): ?><option value="<?= $i ?>" <?= $status === $i ? 'selected' : '' ?>><?= h(status_label($i)) ?></option><?php endfor; ?>
+                                    <?php for ($i = 1; $i <= 11; $i++): ?><option value="<?= $i ?>" <?= $status === $i ? 'selected' : '' ?>><?= h(status_label($i)) ?></option><?php endfor; ?>
                                 </select>
                                 <div class="column-filter-actions"><a href="<?= h(filter_reset_url('status')) ?>">清除</a><button class="btn btn-primary btn-sm">确认</button></div>
                             </form>

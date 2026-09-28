@@ -2,6 +2,7 @@
 require __DIR__ . '/includes/auth.php';
 
 $pageTitle = 'P系统';
+$pageContentClass = 'page-content--embedded';
 require __DIR__ . '/includes/layout_top.php';
 ?>
 <div class="embedded-system-card">

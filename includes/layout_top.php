@@ -17,7 +17,7 @@ if (can_approve_orders()) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= h($pageTitle) ?> - 智眸·澳门</title>
-    <link rel="stylesheet" href="<?= h(app_url('assets/css/app.css')) ?>">
+    <link rel="stylesheet" href="<?= h(app_url('assets/css/app.css?v=' . filemtime(__DIR__ . '/../assets/css/app.css'))) ?>">
 </head>
 <body>
 <div class="app-shell">
@@ -66,7 +66,7 @@ if (can_approve_orders()) {
             </div>
         </header>
 
-        <div class="page-content">
+        <div class="page-content<?= isset($pageContentClass) ? ' ' . h($pageContentClass) : '' ?>">
             <?php if ($flashMessage): ?>
                 <div class="alert <?= h($flashMessage['type']) ?>">
                     <span><?= $flashMessage['type'] === 'success' ? '✓' : '!' ?></span>

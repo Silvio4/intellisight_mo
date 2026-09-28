@@ -55,6 +55,21 @@ assert_same('19', eportal_response_ticket_no(['state'=>1, 'msg'=>'19']), 'state 
 assert_same('EP-21', eportal_response_ticket_no(['success'=>true, 'ticket_no'=>'EP-21']), 'ticket_no field');
 assert_same('', eportal_response_ticket_no(['state'=>1, 'msg'=>'建单成功']), 'non-numeric state msg');
 
+$attachmentRoot = sys_get_temp_dir() . '/eportal_po_' . bin2hex(random_bytes(6));
+mkdir($attachmentRoot . '/42', 0777, true);
+file_put_contents($attachmentRoot . '/42/source_01_po.txt', 'purchase order');
+$poAttachment = eportal_po_attachment([
+    'id'=>42,
+    'attachment_source_file'=>'source_01_po.txt',
+    'attachment_original_name'=>'customer-po.txt',
+], $attachmentRoot);
+assert_same($attachmentRoot . '/42/source_01_po.txt', $poAttachment['path'], 'PO attachment path');
+assert_same('customer-po.txt', $poAttachment['name'], 'PO attachment original name');
+assert_true($poAttachment['size'] > 0, 'PO attachment size');
+unlink($attachmentRoot . '/42/source_01_po.txt');
+rmdir($attachmentRoot . '/42');
+rmdir($attachmentRoot);
+
 $payload = eportal_payload([
     'pid'=>'PC2310270015', 'description'=>'Battery', 'vendor_part_no'=>'HFG3030010',
     'qty'=>'2', 'price_currency'=>'MOP', 'unit_price'=>'3762', 'po_no'=>'8800051419',

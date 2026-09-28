@@ -207,9 +207,9 @@ uploaded_by, created_at
 | `exchange_rate` | 固定值 `"1"` | 当前接口实现使用字符串 `1`。 |
 | `sales_bundling` | 固定值 `Yes` | 与提供的接口样例一致。 |
 | `date` | 审批同意当天 | 澳门时区 `Y-m-d`；若应为订单日期则新增字段。 |
-| `att1` | 原合同文件或 `null` | 是否传原文件由业务及 ePortal 编码协议确认。 |
+| `att1` | `files/contract_forms/{task_id}/{attachment_source_file}` | 以 multipart 文件段传递用户在智眸新建表单时上传的原始 PO 文件，并保留上传时的文件名和检测到的 MIME 类型；文件缺失时中止建单。JSON `data` 内的同名占位字段仍为 `null`。 |
 | `att2` | `files/costing_sheet/costing_sheet_Txxxxxx.xlsx` | 必须是该审批轮次最新生成文件。 |
-| `files` | `contract_form_files.category=supplement` | 其他附件数组；元素结构仍需 ePortal 确认。 |
+| `files` | `contract_form_files.category=supplement` | 新建订单时上传的“其他资料”及订单退回后上传的补充附件，建单时依次作为 multipart 的 `files[0]`、`files[1]` 等文件段发送。 |
 | `stage` | 配置固定值 `0` | 整数。 |
 | `salesman` | `contract_forms.sales_person` | 当前与 `sales_person` 传相同值。 |
 | `product_amount` | 产品类行金额合计 | 若 ePortal 接受 `null` 可传 `null`；建议由行项目计算。 |

@@ -52,6 +52,37 @@ function eportal_response_ticket_no(array $response): string
     return '';
 }
 
+function eportal_po_attachment(array $task, string $filesRoot): array
+{
+    $storedName = basename(trim((string)($task['attachment_source_file'] ?? '')));
+    $originalName = basename(trim((string)($task['attachment_original_name'] ?? '')));
+    if ($storedName === '' || $originalName === '') {
+        throw new RuntimeException('找不到用户上传的 PO 文件记录。');
+    }
+
+    $path = rtrim($filesRoot, '/\\') . DIRECTORY_SEPARATOR . (int)($task['id'] ?? 0)
+        . DIRECTORY_SEPARATOR . $storedName;
+    if (!is_file($path)) {
+        throw new RuntimeException('找不到用户上传的 PO 文件。');
+    }
+
+    $mimeType = 'application/octet-stream';
+    if (class_exists('finfo')) {
+        $finfo = new finfo(FILEINFO_MIME_TYPE);
+        $detected = $finfo->file($path);
+        if (is_string($detected) && $detected !== '') {
+            $mimeType = $detected;
+        }
+    }
+
+    return [
+        'path'=>$path,
+        'name'=>$originalName,
+        'type'=>$mimeType,
+        'size'=>filesize($path),
+    ];
+}
+
 function eportal_payload(array $task): array
 {
     $userFields = ['applicant_id', 'applicant', 'applicant_mail', 'buyer_mail', 'buyer',
@@ -139,12 +170,18 @@ function submit_task_to_eportal(int $taskId): array
     $json = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     if ($json === false) throw new RuntimeException('ePortal 数据编码失败。');
 
+    $poAttachment = eportal_po_attachment($task, dirname(__DIR__) . '/files/contract_forms');
     $sheetMime = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-    $post = ['data'=>$json, 'att2'=>new CURLFile($sheet, $sheetMime, basename($sheet))];
+    $post = [
+        'data'=>$json,
+        'att1'=>new CURLFile($poAttachment['path'], $poAttachment['type'], $poAttachment['name']),
+        'att2'=>new CURLFile($sheet, $sheetMime, basename($sheet)),
+    ];
     // cURL 会在发送时把 CURLFile 转成二进制 multipart 段。日志保留完整 data
     // 参数以及每个文件段的名称、类型、大小和来源，避免把二进制文件写入日志。
     $requestBodyLog = [
         'data'=>$json,
+        'att1'=>$poAttachment,
         'att2'=>[
             'name'=>basename($sheet),
             'type'=>$sheetMime,

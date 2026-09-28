@@ -40,7 +40,7 @@ CREATE TABLE `contract_forms` (
   `created_by_name` VARCHAR(120) NOT NULL DEFAULT '' COMMENT '创建人名字快照',
   `created_by_mail` VARCHAR(190) NOT NULL DEFAULT '' COMMENT '创建人邮箱快照',
   `sales_person` VARCHAR(120) NOT NULL DEFAULT '' COMMENT '销售人员',
-  `status` TINYINT UNSIGNED NOT NULL DEFAULT 1 COMMENT '1草稿中 2待识别 3识别中 4匹配中 5待建表 6待审批 7已退回 8建单中 9已完成 10待重试',
+  `status` TINYINT UNSIGNED NOT NULL DEFAULT 1 COMMENT '1草稿中 2待识别 3识别中 4匹配中 5待建表 6待审批 7已退回 8建单中 9已完成 10待重试 11暂不处理',
   `attachment_original_name` VARCHAR(255) DEFAULT NULL COMMENT '上传时文件名',
   `attachment_source_file` VARCHAR(255) DEFAULT NULL COMMENT '保存的原文件名',
   `attachment_contract_quote_epo` VARCHAR(255) DEFAULT NULL COMMENT '识别用PDF文件名',
@@ -86,7 +86,7 @@ CREATE TABLE `contract_forms` (
   `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`id`), KEY `idx_contract_forms_status_id` (`status`,`id`), KEY `idx_contract_forms_approval` (`status`,`submitted_approval_at`,`id`), KEY `idx_contract_forms_created_at` (`created_at`),
   KEY `idx_contract_forms_created_by` (`created_by`), CONSTRAINT `fk_contract_forms_user` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='合同表单及任务';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='订单资料及任务';
 
 CREATE TABLE `contract_approvals` (
   `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,

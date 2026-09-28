@@ -1,6 +1,6 @@
 <?php
 if (!isset($pageTitle)) {
-    $pageTitle = '合同表单';
+    $pageTitle = '订单资料';
 }
 $currentPage = basename($_SERVER['SCRIPT_NAME'] ?? '');
 $displayName = trim((string)($_SESSION['name'] ?? '')) ?: (string)($_SESSION['username'] ?? '用户');
@@ -30,7 +30,13 @@ if (can_approve_orders()) {
                 <span class="nav-icon">
                     <svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M15 3v5h5M9 12h7M9 16h7"/></svg>
                 </span>
-                <span class="nav-text">合同表单</span>
+                <span class="nav-text">订单资料</span>
+            </a>
+            <a class="nav-item <?= $currentPage === 'p_system.php' ? 'active' : '' ?>" href="<?= h(app_url('p_system.php')) ?>">
+                <span class="nav-icon">
+                    <svg viewBox="0 0 24 24"><path d="M4 5h16v14H4z"/><path d="M8 9h5a2 2 0 0 1 0 4H8V9zm0 4v3"/></svg>
+                </span>
+                <span class="nav-text">P系统</span>
             </a>
             <?php if (can_approve_orders()): ?>
             <a class="nav-item <?= in_array($currentPage, ['approval_orders.php', 'approval_order_view.php'], true) ? 'active' : '' ?>" href="<?= h(app_url('approval_orders.php')) ?>">

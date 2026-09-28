@@ -39,7 +39,7 @@ $pageTitle = '任务详情';
 require __DIR__ . '/includes/layout_top.php';
 ?>
 <div class="page-head">
-    <div><h2><?= h(format_task_no($task['id'])) ?></h2><p>合同任务详情与识别结果</p></div>
+    <div><h2><?= h(format_task_no($task['id'])) ?></h2><p>订单资料任务详情与识别结果</p></div>
     <div>
         <?php if ((int)$task['status'] === 7 && ((int)$task['created_by'] === (int)$_SESSION['user_id'] || current_user_role() === 'admin')): ?><a class="btn btn-danger" href="<?= h(app_url('contract_form_edit.php?id=' . $taskId)) ?>">修改并重新提交</a><?php endif; ?>
         <?php if ((int)$task['status'] === 10 && can_approve_orders()): ?>
@@ -66,6 +66,13 @@ require __DIR__ . '/includes/layout_top.php';
                 <div class="info-item"><label>创建时间</label><div><?= h($task['created_at']) ?></div></div>
                 <div class="info-item"><label>开始识别时间</label><div><?= h($task['recognition_started_at'] ?: '—') ?></div></div>
                 <div class="info-item"><label>完成时间</label><div><?= h($task['completed_at'] ?: '—') ?></div></div>
+                <?php if ((int)$task['status'] === 11): ?>
+                <div class="info-item"><label>客户名称</label><div><?= h($task['customer_name'] ?: '—') ?></div></div>
+                <div class="info-item"><label>最终用户名称</label><div><?= h($task['end_user_name'] ?: '—') ?></div></div>
+                <div class="info-item"><label>最终用户联系人</label><div><?= h($task['end_user_contact'] ?: '—') ?></div></div>
+                <div class="info-item"><label>最终用户邮箱</label><div><?= h($task['end_user_email'] ?: '—') ?></div></div>
+                <div class="info-item full"><label>客户送货地址</label><div><?= nl2br(h($task['customer_delivery_address'] ?: '—')) ?></div></div>
+                <?php endif; ?>
                 <?php if (!empty($task['rejection_reason'])): ?><div class="info-item full"><label>退回理由</label><div class="danger-text"><?= h($task['rejection_reason']) ?></div></div><?php endif; ?>
                 <?php if (!empty($task['eportal_last_error'])): ?><div class="info-item full"><label>ePortal 建单错误</label><div class="danger-text"><?= h($task['eportal_last_error']) ?></div></div><?php endif; ?>
                 <?php if (!empty($task['error_message'])): ?><div class="info-item full"><label>错误信息</label><div style="color:#c43f50"><?= h($task['error_message']) ?></div></div><?php endif; ?>
@@ -76,7 +83,7 @@ require __DIR__ . '/includes/layout_top.php';
     <section class="card">
         <div class="card-head"><div><h3>任务文件</h3><small class="section-hint">订单原件、业务附件与 DN 文件</small></div><span style="color:#929bab"><?= count($files) + count($supplementFiles) + count($dnTasks) + count(array_filter($dnTasks, static function ($dn) { return !empty($dn['done_file_name']); })) + ($hasCostingSheet ? 1 : 0) ?> 份</span></div>
         <div class="card-body">
-            <div class="file-section-title">订单与业务文件</div>
+            <div class="file-section-title"><?= (int)$task['status'] === 11 ? '报价单、邮件/其他资料' : '订单与业务文件' ?></div>
             <?php foreach ($files as $file): ?>
                 <div class="file-download">
                     <span class="file-type"><?= h(strtoupper(substr($file['attachment_extension'], 0, 4))) ?></span>
@@ -132,7 +139,7 @@ require __DIR__ . '/includes/layout_top.php';
     <div class="card-head"><h3>识别结果</h3><?php if (!$result): ?><span style="color:#929bab">等待接口回传</span><?php endif; ?></div>
     <div class="card-body">
         <?php if (!$result): ?>
-            <div class="empty-state" style="padding:35px 20px"><div class="empty-icon">◎</div><strong><?= (int)$task['status'] === 2 ? '任务正在等待领取' : '暂未收到识别结果' ?></strong><p>识别系统调用接口并返回结果后，此处会自动展示。</p></div>
+            <div class="empty-state" style="padding:35px 20px"><div class="empty-icon">◎</div><strong><?= (int)$task['status'] === 11 ? '该任务已暂存，暂不进入处理流程' : ((int)$task['status'] === 2 ? '任务正在等待领取' : '暂未收到识别结果') ?></strong><p><?= (int)$task['status'] === 11 ? '后续处理流程开放后，可再对该任务进行处理。' : '识别系统调用接口并返回结果后，此处会自动展示。' ?></p></div>
         <?php else: ?>
             <div class="info-grid" style="margin-bottom:20px">
                 <div class="info-item"><label>PO No.</label><div><?= h($result['po_no'] ?: '—') ?></div></div>

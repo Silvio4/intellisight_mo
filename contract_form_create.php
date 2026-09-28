@@ -1,10 +1,16 @@
 <?php
 require __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/file_converter.php';
-$pageTitle = '新建订单表单';
+$withoutPo = ($_POST['po_type'] ?? ($_GET['po'] ?? '')) === 'none';
+$pageTitle = $withoutPo ? '无正式客户PO' : '有正式客户PO';
 $error = '';
 $salesPerson = trim((string)($_POST['sales_person'] ?? ''));
 $customerId = trim((string)($_POST['customer_id'] ?? ''));
+$customerName = trim((string)($_POST['customer_name'] ?? ''));
+$deliveryAddress = trim((string)($_POST['customer_delivery_address'] ?? ''));
+$endUserName = trim((string)($_POST['end_user_name'] ?? ''));
+$endUserContact = trim((string)($_POST['end_user_contact'] ?? ''));
+$endUserEmail = trim((string)($_POST['end_user_email'] ?? ''));
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verify_csrf();
@@ -26,15 +32,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             $pdo->beginTransaction();
             $operator = (string)($_SESSION['name'] ?? $_SESSION['username'] ?? '');
-            $stmt = $pdo->prepare('INSERT INTO contract_forms (created_by, created_by_name, created_by_mail, customer_id, sales_person, status, created_at, submitted_recognition_at, updated_at) VALUES (:user_id, :name, :mail, :customer_id, :sales_person, 1, NOW(), NULL, NOW())');
-            $stmt->execute([':user_id' => (int)$_SESSION['user_id'], ':name' => $operator, ':mail' => (string)($_SESSION['email'] ?? ''), ':customer_id' => $customerId, ':sales_person' => $salesPerson]);
+            $stmt = $pdo->prepare('INSERT INTO contract_forms (created_by, created_by_name, created_by_mail, customer_id, customer_name, customer_delivery_address, end_user_name, end_user_contact, end_user_email, sales_person, status, created_at, submitted_recognition_at, updated_at) VALUES (:user_id, :name, :mail, :customer_id, :customer_name, :delivery_address, :end_user_name, :end_user_contact, :end_user_email, :sales_person, 1, NOW(), NULL, NOW())');
+            $stmt->execute([':user_id' => (int)$_SESSION['user_id'], ':name' => $operator, ':mail' => (string)($_SESSION['email'] ?? ''), ':customer_id' => $customerId, ':customer_name' => $customerName, ':delivery_address' => $deliveryAddress, ':end_user_name' => $endUserName, ':end_user_contact' => $endUserContact, ':end_user_email' => $endUserEmail, ':sales_person' => $salesPerson]);
             $taskId = (int)$pdo->lastInsertId();
             $insertLog = $pdo->prepare('INSERT INTO logs (operator, task_id, operation_time, operation_content, task_status) VALUES (:operator, :task_id, NOW(), :content, :status)');
-            $insertLog->execute([':operator' => $operator, ':task_id' => $taskId, ':content' => '新建表单', ':status' => 1]);
+            $insertLog->execute([':operator' => $operator, ':task_id' => $taskId, ':content' => '新建订单资料', ':status' => 1]);
             $taskDir = __DIR__ . '/files/contract_forms/' . $taskId;
             $saved = $converter->saveAndConvert($file, $taskDir, 1);
-            $update = $pdo->prepare('UPDATE contract_forms SET status = 2, attachment_original_name = :original, attachment_source_file = :source, attachment_contract_quote_epo = :pdf, attachment_extension = :extension, attachment_file_size = :size, attachment_sha256 = :sha256, submitted_recognition_at = NOW(), updated_at = NOW() WHERE id = :id');
-            $update->execute([':original'=>$saved['original_name'], ':source'=>$saved['stored_name'], ':pdf'=>$saved['pdf_name'], ':extension'=>$saved['extension'], ':size'=>$saved['file_size'], ':sha256'=>$saved['sha256'], ':id'=>$taskId]);
+            $targetStatus = $withoutPo ? 11 : 2;
+            $update = $pdo->prepare('UPDATE contract_forms SET status = :status, attachment_original_name = :original, attachment_source_file = :source, attachment_contract_quote_epo = :pdf, attachment_extension = :extension, attachment_file_size = :size, attachment_sha256 = :sha256, submitted_recognition_at = CASE WHEN :status_for_date = 2 THEN NOW() ELSE NULL END, updated_at = NOW() WHERE id = :id');
+            $update->execute([':status'=>$targetStatus, ':status_for_date'=>$targetStatus, ':original'=>$saved['original_name'], ':source'=>$saved['stored_name'], ':pdf'=>$saved['pdf_name'], ':extension'=>$saved['extension'], ':size'=>$saved['file_size'], ':sha256'=>$saved['sha256'], ':id'=>$taskId]);
             $uploads = $_FILES['supplements'] ?? null;
             if ($uploads && is_array($uploads['name'] ?? null)) {
                 $supplementDirectory = $taskDir . '/supplements';
@@ -75,10 +82,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             ':uid'=>(int)$_SESSION['user_id']]);
                 }
             }
-            $insertLog->execute([':operator' => $operator, ':task_id' => $taskId, ':content' => '保存表单', ':status' => 1]);
-            $insertLog->execute([':operator' => $operator, ':task_id' => $taskId, ':content' => '提交识别', ':status' => 2]);
+            $insertLog->execute([':operator' => $operator, ':task_id' => $taskId, ':content' => '保存订单资料', ':status' => 1]);
+            $insertLog->execute([':operator' => $operator, ':task_id' => $taskId, ':content' => $withoutPo ? '提交无正式客户PO资料，暂不处理' : '提交识别', ':status' => $targetStatus]);
             $pdo->commit();
-            flash('success', '合同任务 ' . format_task_no($taskId) . ' 已创建，当前状态为“待识别”。');
+            flash('success', '订单资料任务 ' . format_task_no($taskId) . ' 已创建，当前状态为“' . status_label($targetStatus) . '”。');
             redirect('contract_form_view.php?id=' . $taskId);
         } catch (Throwable $e) {
             if ($pdo->inTransaction()) $pdo->rollBack();
@@ -90,11 +97,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 require __DIR__ . '/includes/layout_top.php';
 ?>
-<div class="page-head"><div><h2>新建订单表单</h2><p>上传订单资料，系统将自动生成任务号</p></div><a class="btn btn-secondary" href="<?= h(app_url('contract_forms.php')) ?>">← 返回列表</a></div>
+<div class="page-head"><div><h2><?= $withoutPo ? '无正式客户PO' : '有正式客户PO' ?></h2><p><?= $withoutPo ? '上传报价单及邮件等资料，提交后生成暂不处理的任务' : '上传订单资料，系统将自动生成任务号' ?></p></div><a class="btn btn-secondary" href="<?= h(app_url('contract_forms.php')) ?>">← 返回列表</a></div>
 <?php if ($error !== ''): ?><div class="alert error"><span>!</span><?= h($error) ?></div><?php endif; ?>
 <form class="card" method="post" enctype="multipart/form-data" data-task-form>
 <input type="hidden" name="csrf_token" value="<?= h(csrf_token()) ?>">
+<input type="hidden" name="po_type" value="<?= $withoutPo ? 'none' : 'formal' ?>">
 <div class="card-head"><h3>订单资料</h3><span style="color:#929bab">带 <i class="required">*</i> 为必填项</span></div>
-<div class="card-body"><div class="form-grid"><div class="form-group"><label for="customer_id">Customer ID <span class="required">*</span></label><input class="form-control" id="customer_id" name="customer_id" value="<?= h($customerId) ?>" maxlength="255" required placeholder="请输入 Customer ID"></div><div class="form-group"><label for="sales_person">Sales Person <span class="required">*</span></label><input class="form-control" id="sales_person" name="sales_person" value="<?= h($salesPerson) ?>" maxlength="120" required placeholder="请输入 Sales Person"></div><div class="form-group full"><label>订单资料 <span class="required">*</span></label><div class="upload-zone" data-upload-zone><input type="file" name="document" required data-file-input accept=".pdf,.jpg,.jpeg,.png,.tif,.tiff,.bmp,.webp,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.rtf,.txt,.csv"><div class="upload-icon">⇧</div><strong>点击选择文件，或将文件拖到这里</strong><small>支持 PDF、图片及 Office 文档；单份不超过 <?= (int)config_value('upload.max_file_size_mb', 30) ?> MB，系统会转换成识别用 PDF。</small></div><div class="file-list" data-file-list></div></div><div class="form-group full"><label for="supplements">其他资料</label><input class="form-control" id="supplements" type="file" name="supplements[]" multiple accept=".pdf,.jpg,.jpeg,.png,.tif,.tiff,.bmp,.webp,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.rtf,.txt,.csv"><div class="form-help">可选，最多上传 <?= (int)config_value('upload.max_files', 10) ?> 份，单份不超过 <?= (int)config_value('upload.max_file_size_mb', 30) ?> MB；建单时将通过 ePortal 的 files 参数发送。</div></div></div><div class="form-actions"><a class="btn btn-secondary" href="<?= h(app_url('contract_forms.php')) ?>">取消</a><button class="btn btn-primary" type="submit">提交并生成任务</button></div></div>
+<div class="card-body"><div class="form-grid"><div class="form-group"><label for="customer_id">Customer ID <span class="required">*</span></label><input class="form-control" id="customer_id" name="customer_id" value="<?= h($customerId) ?>" maxlength="255" required placeholder="请输入 Customer ID"></div><div class="form-group"><label for="sales_person">Sales Person <span class="required">*</span></label><input class="form-control" id="sales_person" name="sales_person" value="<?= h($salesPerson) ?>" maxlength="120" required placeholder="请输入 Sales Person"></div>
+<?php if ($withoutPo): ?>
+<div class="form-group full"><div class="section-title">必要业务字段（人工填写）</div></div>
+<div class="form-group"><label for="customer_name">客户名称</label><input class="form-control" id="customer_name" name="customer_name" value="<?= h($customerName) ?>" maxlength="255" placeholder="请输入客户名称"></div>
+<div class="form-group"><label for="end_user_name">最终用户名称</label><input class="form-control" id="end_user_name" name="end_user_name" value="<?= h($endUserName) ?>" maxlength="255" placeholder="请输入最终用户名称"></div>
+<div class="form-group"><label for="end_user_contact">最终用户联系人</label><input class="form-control" id="end_user_contact" name="end_user_contact" value="<?= h($endUserContact) ?>" maxlength="255" placeholder="请输入联系人"></div>
+<div class="form-group"><label for="end_user_email">最终用户邮箱</label><input class="form-control" type="email" id="end_user_email" name="end_user_email" value="<?= h($endUserEmail) ?>" maxlength="255" placeholder="请输入邮箱"></div>
+<div class="form-group full"><label for="customer_delivery_address">客户送货地址</label><textarea class="form-control" id="customer_delivery_address" name="customer_delivery_address" rows="3" placeholder="请输入送货地址"><?= h($deliveryAddress) ?></textarea></div>
+<?php endif; ?>
+<div class="form-group full"><label><?= $withoutPo ? '报价单' : '订单资料' ?> <span class="required">*</span></label><div class="upload-zone" data-upload-zone><input type="file" name="document" required data-file-input accept=".pdf,.jpg,.jpeg,.png,.tif,.tiff,.bmp,.webp,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.rtf,.txt,.csv"><div class="upload-icon">⇧</div><strong>点击选择文件，或将文件拖到这里</strong><small>支持 PDF、图片及 Office 文档；单份不超过 <?= (int)config_value('upload.max_file_size_mb', 30) ?> MB。</small></div><div class="file-list" data-file-list></div></div><div class="form-group full"><label for="supplements"><?= $withoutPo ? '邮件/其他资料' : '其他资料' ?></label><input class="form-control" id="supplements" type="file" name="supplements[]" multiple accept=".pdf,.jpg,.jpeg,.png,.tif,.tiff,.bmp,.webp,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.rtf,.txt,.csv"><div class="form-help">可选，最多上传 <?= (int)config_value('upload.max_files', 10) ?> 份，单份不超过 <?= (int)config_value('upload.max_file_size_mb', 30) ?> MB<?= $withoutPo ? '。' : '；建单时将通过 ePortal 的 files 参数发送。' ?></div></div></div><div class="form-actions"><a class="btn btn-secondary" href="<?= h(app_url('contract_forms.php')) ?>">取消</a><button class="btn btn-primary" type="submit">提交并生成任务</button></div></div>
 </form>
 <?php require __DIR__ . '/includes/layout_bottom.php'; ?>

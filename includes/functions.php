@@ -73,7 +73,7 @@ function status_label($status): string
 {
     $map = [
         1 => '草稿中', 2 => '待识别', 3 => '识别中', 4 => '匹配中', 5 => '待建表',
-        6 => '待审批', 7 => '已退回', 8 => '建单中', 9 => '已完成', 10 => '待重试',
+        6 => '待审批', 7 => '已退回', 8 => '建单中', 9 => '已完成', 10 => '待重试', 11 => '暂不处理',
     ];
     return $map[$status] ?? $status;
 }
@@ -82,7 +82,7 @@ function status_class($status): string
 {
     $map = [
         1 => 'pending', 2 => 'pending', 3 => 'recognizing', 4 => 'recognizing', 5 => 'pending',
-        6 => 'pending', 7 => 'failed', 8 => 'recognizing', 9 => 'completed', 10 => 'failed',
+        6 => 'pending', 7 => 'failed', 8 => 'recognizing', 9 => 'completed', 10 => 'failed', 11 => 'paused',
     ];
     return $map[$status] ?? 'pending';
 }
